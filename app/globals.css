@@ -476,3 +476,48 @@ a.btn,a.btn:hover,a.fchip{text-decoration:none}
   .mchip{padding:7px 13px;font-size:13px}
   .callout{flex-direction:column;align-items:flex-start}
 }
+
+/* ---------- Part Two, round one: v7 shell ---------- */
+.side .sysbar{margin:auto 10px 12px;border:1px solid #C9E5D8;background:var(--okbg);border-radius:var(--rs);
+ padding:10px 11px;display:flex;gap:9px;align-items:center;color:#0C6144;text-decoration:none}
+.side .sysbar>i{width:7px;height:7px;border-radius:50%;background:var(--ok);flex:0 0 7px}
+.side .sysbar b{display:block;font-size:11.5px;font-weight:700;color:#0C6144}
+.side .sysbar span{display:block;font-size:10.5px;color:#4C7565;margin-top:1px}
+.breadcrumbs{display:flex;align-items:center;min-width:0;overflow:hidden;white-space:nowrap}
+.breadcrumbPart{display:flex;align-items:center;min-width:0}
+.breadcrumbPart a{color:var(--muted);text-decoration:none}
+.breadcrumbPart a:hover{color:var(--blue)}
+.breadcrumbPart b{color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.breadcrumbSep{color:var(--faint);padding:0 7px}
+.searchbtn{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:var(--rs);
+ padding:6px 9px 6px 11px;color:var(--faint);font-size:12.5px;background:var(--head);min-width:210px;cursor:pointer}
+.searchbtn:hover{border-color:#CBD3DC;background:#fff;color:var(--muted)}
+.searchbtn kbd{margin-left:auto;font-size:10.5px;border:1px solid var(--line);border-radius:4px;padding:0 5px;background:#fff;
+ font-family:inherit;color:var(--faint)}
+.topuser{display:flex;align-items:center;gap:9px}
+.whoIdentity{display:flex;flex-direction:column;line-height:1.2;text-align:right}
+.whoIdentity b{font-size:12.5px;color:var(--ink);font-weight:600}
+.whoIdentity small{font-size:10.5px;color:var(--faint);margin-top:2px}
+.topuser .av{flex:0 0 29px}
+.searchInputRow{display:flex;align-items:center;border-bottom:1px solid var(--line2)}
+.searchInputRow input{border-bottom:none;min-width:0}
+.searchClose{border:none;background:#fff;color:var(--muted);font-size:12px;padding:8px 16px;cursor:pointer}
+.searchClose:hover{color:var(--ink)}
+a.sr{text-decoration:none;color:inherit}
+.sr.on{background:var(--head)}
+.searchEmpty{padding:28px 18px;color:var(--faint);font-size:13px;text-align:center}
+.searchHint{display:flex;gap:16px;padding:9px 18px;border-top:1px solid var(--line2);font-size:10.5px;color:var(--faint)}
+
+@media (max-width: 900px){
+  .searchbtn{min-width:128px}
+  .whoIdentity{display:none}
+}
+@media (max-width: 620px){
+  .searchbtn{min-width:0;padding:6px 9px}
+  .searchbtn kbd{display:none}
+  .topuser{gap:6px}
+  .signinProper{display:none}
+  .topuser .who>.btn{padding:5px 8px}
+  .sov{padding:62px 10px}
+  .searchHint{display:none}
+}

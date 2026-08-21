@@ -1,10 +1,20 @@
 'use client';
 import { useState } from 'react';
+import Link from 'next/link';
 import Nav from './Nav';
 import Who from './Who';
+import Breadcrumbs from './Breadcrumbs';
+import GlobalSearch from './GlobalSearch';
 
-export default function Shell({ groups, who, children }) {
+function initials(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  return ((parts[0] || '?')[0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+}
+
+export default function Shell({ groups, who, search, children }) {
   const [open, setOpen] = useState(false);
+  const canOpenJobs = groups.some((g) => g.items.some((i) => i.href === '/jobs'));
+  const jobStatus = <><i aria-hidden="true" /><div><b>Jobs healthy</b><span>Digest 08:01</span></div></>;
 
   return (
     <div className={'shell' + (open ? ' navOpen' : '')}>
@@ -12,12 +22,19 @@ export default function Shell({ groups, who, children }) {
       <aside className="side" onClick={() => setOpen(false)}>
         <div className="brand"><img src="/cn-logo.png" alt="Creators Network" /></div>
         <Nav groups={groups} />
+        {canOpenJobs
+          ? <Link className="sysbar" href="/jobs">{jobStatus}</Link>
+          : <div className="sysbar">{jobStatus}</div>}
       </aside>
       <div className="main">
         <div className="top">
           <button className="menuBtn" onClick={() => setOpen(!open)} aria-label="Menu">Menu</button>
-          <div className="crumb"><b>{who.name}</b>{who.role ? ', ' + who.role : ''}</div>
-          {who.all && who.all.length ? <Who slug={who.slug} all={who.all} how={who.how} name={who.name} /> : null}
+          <div className="crumb"><Breadcrumbs index={search.items} /></div>
+          <GlobalSearch items={search.items} error={search.error} />
+          <div className="topuser">
+            <Who how={who.how} name={who.name} role={who.role} />
+            <div className="av" title={[who.name, who.role].filter(Boolean).join(', ')}>{initials(who.name)}</div>
+          </div>
         </div>
         <div className="body">{children}</div>
       </div>
