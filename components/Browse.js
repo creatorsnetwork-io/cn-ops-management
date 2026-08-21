@@ -8,7 +8,10 @@ const TYPE = {
   influencer: 'Influencer', video: 'Film or shoot', aiVideo: 'AI video', events: 'Event',
 };
 const SHORT = { social: 'SOC', website: 'WEB', seo: 'SEO', influencer: 'INF', video: 'FLM', aiVideo: 'AIV', events: 'EVT' };
-const tagFor = (h) => ({ 'On track': 'ok', Watch: 'warn', 'Needs attention': 'bad', 'Winding down': 'warn' }[h] || 'mute');
+const tagFor = (h) => ({
+  'On track': 'ok', Watch: 'warn', 'Needs attention': 'bad', 'Winding down': 'warn',
+  Written: 'ok', Draft: 'warn', Missing: 'bad', Complete: 'ok', Onboarding: 'warn', Closed: 'mute',
+}[h] || 'mute');
 const pct = (a, b) => (!b ? 0 : Math.min(100, Math.round((a / b) * 100)));
 
 function Star({ kind, slug, on, onDone }) {
@@ -74,8 +77,8 @@ export function ClientsBrowse({ who, rows, favs, canAdd }) {
           <div className="eyebrow n">Accounts and relationships</div>
           <h1>Clients</h1>
           <p className="lede">
-            A client owns the relationship and the contacts. Every contract, calendar and
-            deliverable lives in a project beneath it.
+            A client owns the standing brand brain. Every contract, timeline and deliverable
+            lives in a project beneath it.
           </p>
         </div>
         {canAdd ? <PermButton who={who} cap="createClient" label="Add client" dark onClick={() => setAdding(!adding)} /> : null}
@@ -113,18 +116,21 @@ export function ClientsBrowse({ who, rows, favs, canAdd }) {
                 </div>
               </div>
               <h3>{c.name}</h3>
-              <div className="cs">{c.note || (c.projects.length ? c.projects.map((p) => TYPE[p.type]).join(', ') : 'No projects yet')}</div>
+              <div className="cs">{c.typeLabel}</div>
               <div className="metagrid">
                 <div><div className="lbl">Lead</div><div className="v">{c.lead || '—'}</div></div>
+                <div><div className="lbl">Brand brain</div><div className="v"><span className={'tag ' + tagFor(c.brain)}>{c.brain}</span></div></div>
                 <div><div className="lbl">Projects</div><div className="v">{c.projects.length}</div></div>
-                <div><div className="lbl">Contacts</div><div className="v">{c.approvers ? c.approvers + ' can approve' : (c.contactCount || 0) + ' recorded'}</div></div>
-                <div><div className="lbl">Needs looking at</div><div className="v">
-                  {c.late || c.escalations
-                    ? <span className="tag bad">{[c.late ? c.late + ' late' : '', c.escalations ? c.escalations + ' open' : ''].filter(Boolean).join(', ')}</span>
-                    : <span className="tag ok">Nothing</span>}</div></div>
+                <div><div className="lbl">Setup</div><div className="v">
+                  {c.setup >= 9 ? <span className="tag ok">Complete</span> : <span className="tag warn">{c.setup} of 9</span>}
+                </div></div>
+                <div style={{ gridColumn: '1 / -1' }}><div className="lbl">Renewal</div><div className="v">{c.renewal || 'Not set'}</div></div>
               </div>
               <div className="cfoot">
-                <div className="rowb"><Link className="btn sm" href={'/clients/' + c.slug}>Open</Link></div>
+                <div className="rowb">
+                  <Link className="btn sm" href={'/clients/' + c.slug}>Open</Link>
+                  {c.setup < 9 ? <Link className="btn sm" href={'/clients/' + c.slug + '#setup'}>Finish setup</Link> : null}
+                </div>
                 <div className="chipsline">{c.projects.slice(0, 4).map((p) => <span className="tchip" key={p.slug}>{SHORT[p.type] || p.type.slice(0, 3).toUpperCase()}</span>)}</div>
               </div>
             </div>))}
@@ -133,19 +139,21 @@ export function ClientsBrowse({ who, rows, favs, canAdd }) {
       ) : (
         <div className="panel">
           <table className="tbl">
-            <thead><tr><th style={{ width: 34 }} /><th>Client</th><th>Projects</th><th>Lead</th><th>Contacts</th><th>Drive</th><th>State</th></tr></thead>
+            <thead><tr><th style={{ width: 34 }} /><th>Client</th><th>Type</th><th>Lead</th><th>Projects</th><th>Brand brain</th><th>Setup</th><th>Health</th><th>Renewal</th></tr></thead>
             <tbody>
               {list.map((c) => (
                 <tr key={c.slug}>
                   <td><Star kind="client" slug={c.slug} on={starred(c.slug)} onDone={onStar} /></td>
                   <td className="b"><Link href={'/clients/' + c.slug}>{c.name}</Link><div className="dim" style={{ fontSize: 12 }}>{c.code}</div></td>
-                  <td className="num">{c.projects.length}</td>
+                  <td className="dim">{c.typeLabel}</td>
                   <td className="dim">{c.lead || '—'}</td>
-                  <td className="dim">{c.contactCount || 0}{c.approvers ? ', ' + c.approvers + ' approve' : ''}</td>
-                  <td className="dim">{c.driveFolderId ? 'linked' : '—'}</td>
+                  <td className="num">{c.projects.length}</td>
+                  <td><span className={'tag ' + tagFor(c.brain)}>{c.brain}</span></td>
+                  <td className="dim">{c.setup} of 9</td>
                   <td><span className={'tag ' + tagFor(c.health)}>{c.health}</span></td>
+                  <td className="dim">{c.renewal || 'Not set'}</td>
                 </tr>))}
-              {list.length === 0 ? <tr><td colSpan={7} className="empty">{favOnly ? 'Nothing starred yet.' : 'No clients.'}</td></tr> : null}
+              {list.length === 0 ? <tr><td colSpan={9} className="empty">{favOnly ? 'Nothing starred yet.' : 'No clients.'}</td></tr> : null}
             </tbody>
           </table>
         </div>)}
@@ -153,13 +161,13 @@ export function ClientsBrowse({ who, rows, favs, canAdd }) {
 }
 
 /* ============================ PROJECTS ============================ */
-export function ProjectsBrowse({ who, rows, clients, people, favs }) {
+export function ProjectsBrowse({ who, rows, clients, people, favs, openAdd, initialClient }) {
   const [favOnly, setFavOnly] = useState(false);
   const [grid, setGrid] = useState(true);
   const [filter, setFilter] = useState('all');
   const [fav, setFav] = useState(favs || []);
-  const [adding, setAdding] = useState(false);
-  const [f, setF] = useState({ name: '', clientSlug: (clients[0] || {}).slug || '', type: 'social', owner: who, why: '' });
+  const [adding, setAdding] = useState(!!openAdd);
+  const [f, setF] = useState({ name: '', clientSlug: initialClient || (clients[0] || {}).slug || '', type: 'social', owner: who, why: '' });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [msg, setMsg] = useState('');
@@ -189,7 +197,7 @@ export function ProjectsBrowse({ who, rows, clients, people, favs }) {
         <div>
           <div className="eyebrow n">Engagements</div>
           <h1>Projects</h1>
-          <p className="lede">Each project carries its own cadence, contract, deliverables and calendars.</p>
+          <p className="lede">Each project carries its own service template, workflow, contract and deliverables.</p>
         </div>
         <PermButton who={who} cap="createProject" label="New project" dark
           onClick={() => setAdding(!adding)} onRequest={() => setAdding(!adding)} />
@@ -244,7 +252,10 @@ export function ProjectsBrowse({ who, rows, clients, people, favs }) {
               </div>
               <div className="lbl" style={{ marginTop: 11 }}>{p.client}</div>
               <h3 style={{ marginTop: 3, fontSize: 16 }}>{p.name}</h3>
-              <div className="cs">Tracked {p.cadence}{p.owner ? ' · ' + p.owner : ''}</div>
+              <div className="cs">{p.subtitle} · {p.term}</div>
+              <div style={{ marginTop: 11, fontSize: 12, color: 'var(--muted)' }}>
+                {p.timeline}<br />Owner {p.owner || 'not assigned'}
+              </div>
               <div style={{ marginTop: 11 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: 'var(--muted)' }}>
                   <span>Client approved</span><b style={{ color: 'var(--ink)' }}>{p.approved} / {p.target || '?'}</b>
@@ -252,9 +263,7 @@ export function ProjectsBrowse({ who, rows, clients, people, favs }) {
                 <div className="bar2" style={{ marginTop: 5 }}><i style={{ width: pct(p.approved, p.target) + '%' }} /></div>
               </div>
               <div className="cfoot">
-                <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  {p.type === 'social' ? (p.cals ? p.cals + ' calendar linked' : 'no calendar yet') : p.cadence}
-                </span>
+                <span style={{ fontSize: 12, color: 'var(--muted)' }}>{p.stage}</span>
                 <Link className="btn sm" href={'/projects/' + p.slug}>Open</Link>
               </div>
             </div>))}
@@ -263,7 +272,7 @@ export function ProjectsBrowse({ who, rows, clients, people, favs }) {
       ) : (
         <div className="panel">
           <table className="tbl">
-            <thead><tr><th style={{ width: 34 }} /><th>Client</th><th>Project</th><th>Service</th><th>Owner</th><th>Tracked</th><th>Approved</th><th>State</th></tr></thead>
+            <thead><tr><th style={{ width: 34 }} /><th>Client</th><th>Project</th><th>Service</th><th>Owner</th><th>Stage</th><th>Approved</th><th>State</th></tr></thead>
             <tbody>
               {list.map((p) => (
                 <tr key={p.slug}>
@@ -272,7 +281,7 @@ export function ProjectsBrowse({ who, rows, clients, people, favs }) {
                   <td><Link href={'/projects/' + p.slug}>{p.name}</Link></td>
                   <td className="dim">{TYPE[p.type] || p.type}</td>
                   <td className="dim">{p.owner || '—'}</td>
-                  <td className="dim">{p.cadence}</td>
+                  <td className="dim">{p.stage}</td>
                   <td className="dim">{p.approved} / {p.target || '?'}</td>
                   <td><span className={'tag ' + tagFor(p.health)}>{p.health}</span></td>
                 </tr>))}

@@ -8,6 +8,13 @@ import { evaluate } from '../../../../lib/onboard';
 
 export const dynamic = 'force-dynamic';
 
+function projectHealth(p) {
+  if (p.status && p.status !== 'active') return 'Closed';
+  if (p.escalations || p.late) return 'Needs attention';
+  if (p.type === 'social' && !p.cals) return 'Watch';
+  return 'On track';
+}
+
 export default async function Page({ params }) {
   const who = meSlug();
   if (!pageAllowed(who, '/clients')) return <NotYours what="Clients" />;
@@ -18,10 +25,13 @@ export default async function Page({ params }) {
     c = await sanity(true).fetch(
       `*[_type=="client" && slug==$s][0]{
         slug, name, code, note, driveFolderId, logoUrl, contacts, obligations, onbManual,
-        channel, turnaround, renewal, active,
+        channel, turnaround, renewal, active, clientType, industry, businessType,
         "projects": *[_type=="project" && references(^._id)]|order(name asc){
-          slug, name, type, cadence, voice, prd, contract, deliverables,
+          slug, name, type, cadence, status, voice, prd, contract, deliverables,
           "owner": owner->name, "cals": count(calendarSources[current==true]),
+          "late": count(*[_type=="work" && references(^._id)
+                && !(state in ["approved","done"]) && defined(due) && due < $today]),
+          "escalations": count(*[_type=="escalation" && references(^._id) && !defined(resolvedAt)]),
           "workApproved": count(*[_type=="work" && references(^._id) && state in ["approved","done"]])},
         "briefs": count(*[_type=="work" && project->client->slug == ^.slug && defined(brief) && brief != ""]),
         "late": count(*[_type=="work" && project->client->slug == ^.slug
@@ -43,6 +53,7 @@ export default async function Page({ params }) {
         ...p,
         target: (p.deliverables || []).reduce((a, d) => a + (+d.target || 0), 0),
         approved: (approvedBy[p.slug] || 0) + (p.workApproved || 0),
+        health: projectHealth(p),
       }));
       links = await sanity(true).fetch(
         'count(*[_type=="weekReview" && defined(clientToken) && projectSlug in $s])', { s: slugs });
@@ -52,5 +63,9 @@ export default async function Page({ params }) {
   if (error) return <><h1>Client</h1><div className="alert">Sanity did not answer. <code>{error}</code></div></>;
   if (!c) return <><h1>Not found</h1><p className="lede"><Link href="/clients">Back to clients</Link></p></>;
 
-  return <ClientDetail c={c} onb={evaluate(c)} links={links} canEdit={['himanshu', 'aashif'].includes(who)} />;
+  const onb = evaluate(c);
+  c.typeLabel = c.clientType || c.industry || c.businessType || 'Client type not set';
+  c.brain = onb.done[2] ? 'Written' : 'Missing';
+
+  return <ClientDetail c={c} onb={onb} links={links} who={who} canEdit={['himanshu', 'aashif'].includes(who)} />;
 }

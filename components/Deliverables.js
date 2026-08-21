@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 
 const blank = () => ({ _key: 'new' + Math.floor(Math.random() * 1e9), name: '', target: 0, period: 'year', acceptance: '' });
 
-export default function Deliverables({ slug, initial, canEdit }) {
+export default function Deliverables({ slug, initial, canEdit, work }) {
   const [rows, setRows] = useState(initial || []);
   const [roll, setRoll] = useState(null);
   const [msg, setMsg] = useState('');
@@ -27,6 +27,18 @@ export default function Deliverables({ slug, initial, canEdit }) {
   }
 
   const t = roll ? roll.totals : null;
+  const statesSubmitted = ['submitted', 'craft', 'ship', 'client', 'approved', 'done'];
+
+  function countFor(row) {
+    const named = (work || []).filter((w) => String(w.deliverable || '').trim().toLowerCase()
+      === String(row.name || '').trim().toLowerCase());
+    const workSubmitted = named.filter((w) => statesSubmitted.includes(w.state)).length;
+    const workApproved = named.filter((w) => ['approved', 'done'].includes(w.state)).length;
+    return {
+      submitted: row.submitted != null && row.submitted !== '' ? (+row.submitted || 0) : workSubmitted,
+      approved: row.approved != null && row.approved !== '' ? (+row.approved || 0) : workApproved,
+    };
+  }
 
   return (
     <div className="panel">
@@ -51,30 +63,36 @@ export default function Deliverables({ slug, initial, canEdit }) {
             time sitting on the client's side, not ours, which is the number worth having in a renewal
             conversation.
           </p>
+          <p className="note" style={{ marginTop: 7 }}>
+            The register below uses each work item's exact deliverable name. Social calendar totals stay
+            in this summary because the current week data does not assign every sheet row to a contract line.
+          </p>
         </div>
       ) : null}
 
       <table className="tbl">
         <thead><tr>
-          <th>What was promised</th><th style={{ width: 92 }}>Target</th><th style={{ width: 110 }}>Per</th>
-          <th style={{ width: 130 }}>Approved so far</th><th>What counts as done</th>
+          <th>What was promised</th><th style={{ width: 96 }}>Committed</th><th style={{ width: 96 }}>Submitted</th>
+          <th style={{ width: 96 }}>Approved</th><th style={{ width: 110 }}>Per</th><th>What counts as done</th>
         </tr></thead>
         <tbody>
-          {rows.map((r, i) => (
-            <tr key={r._key || i}>
+          {rows.map((r, i) => {
+            const n = countFor(r);
+            return <tr key={r._key || i}>
               <td><input className="inp" value={r.name} disabled={!canEdit} placeholder="Social posts" onChange={(e) => set(i, 'name', e.target.value)} /></td>
               <td><input className="inp" value={r.target} disabled={!canEdit} onChange={(e) => set(i, 'target', e.target.value)} /></td>
+              <td><b>{n.submitted}</b>{r.target ? <span style={{ color: 'var(--faint)' }}> of {r.target}</span> : null}</td>
+              <td>{n.approved ? <span className="tag ok">{n.approved}</span> : '0'}</td>
               <td>
                 <select className="inp" value={r.period} disabled={!canEdit} onChange={(e) => set(i, 'period', e.target.value)}>
                   <option value="week">week</option><option value="month">month</option>
                   <option value="year">year</option><option value="total">contract</option>
                 </select>
               </td>
-              <td>{t ? <><b>{t.approved}</b>{r.target ? <span style={{ color: 'var(--faint)' }}> of {r.target}</span> : null}</> : '—'}</td>
               <td><input className="inp" value={r.acceptance} disabled={!canEdit} placeholder="Approved by the client in writing" onChange={(e) => set(i, 'acceptance', e.target.value)} /></td>
-            </tr>
-          ))}
-          {rows.length === 0 ? <tr><td colSpan={5} className="empty">No baseline set. Add what the contract promised.</td></tr> : null}
+            </tr>;
+          })}
+          {rows.length === 0 ? <tr><td colSpan={6} className="empty">No baseline set. Add what the contract promised.</td></tr> : null}
         </tbody>
       </table>
       {msg ? <div style={{ padding: '11px 16px', borderTop: '1px solid var(--line2)', fontSize: 13, color: msg === 'Saved.' ? 'var(--ok)' : 'var(--bad)' }}>{msg}</div> : null}
