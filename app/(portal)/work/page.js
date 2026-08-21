@@ -15,12 +15,6 @@ export default async function Work() {
 
   return (
     <>
-      <div className="eyebrow">Workspace</div>
-      <h1>Work</h1>
-      <p className="lede">
-        Everything that is not a social calendar: pages, articles, reports, films, campaigns.
-        Each one has a state and a next step, and only the people it concerns can move it.
-      </p>
       {error ? <div className="alert">Sanity did not answer. <code>{error}</code></div> : null}
       <WorkList who={who} people={people} projects={projects} canCreate={canCreateWork(who)} />
     </>

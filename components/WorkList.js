@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { LABEL, TAG, KINDS, verbsFor, scopeFilter, tabsFor, isLate, canAssign, assignableTo } from '../lib/work';
+import { can } from '../lib/perm';
 
 const dayOf = (d) => (d ? new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : '');
 
@@ -81,74 +82,131 @@ export default function WorkList({ who, people, projects, canCreate }) {
   async function move(id, verb, extra) {
     const r = await fetch('/api/work', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'move', id, verb, ...(extra || {}) }) });
     const j = await r.json();
-    if (j.ok) setItems((prev) => prev.map((i) => (i._id === id ? j.item : i)));
+    if (j.ok) {
+      setItems((prev) => prev.map((i) => (i._id === id ? j.item : i)));
+      setNote((prev) => ({ ...prev, [id]: '' }));
+    }
     else setNote({ ...note, [id]: j.error });
   }
 
   const tabs = tabsFor(who);
   const shown = items ? scopeFilter(items, who, tab) : [];
+  const mine = items ? scopeFilter(items, who, 'mine') : [];
+  const coming = items ? scopeFilter(items, who, 'tome') : [];
+  const visible = items ? (tabs.some(([k]) => k === 'all')
+    ? scopeFilter(items, who, 'all')
+    : Array.from(new Map(mine.concat(coming).map((i) => [i._id, i])).values())) : [];
+  const atGate = visible.filter((i) => ['submitted', 'craft', 'ship', 'client'].includes(i.state));
+  const grouped = shown.reduce((all, item) => {
+    const key = item.projectSlug || 'unlinked';
+    if (!all[key]) all[key] = [];
+    all[key].push(item);
+    return all;
+  }, {});
+
+  function WorkRow({ item, showProject }) {
+    const allowed = verbsFor(item, who).filter((v) => v.ok);
+    const direct = allowed.filter((v) => !v.needNote && !v.needWho && (!v.needLink || item.driveLink));
+    const detail = allowed.filter((v) => !direct.some((d) => d.name === v.name));
+    const ch = canAssign(item, who);
+    const list = ch.list === null ? people : people.filter((p) => (ch.list || []).includes(p.slug));
+    const shortKind = ({ page: 'WEB', article: 'COPY', report: 'RPT', asset: 'ART', film: 'FILM', aivideo: 'AI', campaign: 'CMP', other: 'WORK' })[item.kind] || 'WORK';
+
+    return (
+      <div className="wi">
+        <div className="ty">{shortKind}</div>
+        <div className="tx">
+          <b><Link href={'/work/' + item._id}>{item.title}</Link></b>
+          <span>
+            {showProject ? item.client + ' · ' + item.projectName + ' · ' : ''}
+            {KINDS[item.kind]?.label || item.kind}
+            {item.deliverable ? ' · counts toward ' + item.deliverable : ''}
+            {item.firstTime ? ' · first time' : ''}
+          </span>
+        </div>
+        <div className="mt work-owner">
+          <div className="lbl">Owner</div>
+          <div className="v">
+            {ch.ok ? (
+              <select className="inp" value={item.assignee || ''} onChange={(e) => assign(item._id, e.target.value)}>
+                <option value="">Nobody</option>
+                {list.map((p) => <option key={p.slug} value={p.slug}>{p.name}</option>)}
+              </select>
+            ) : item.assigneeName || <span className="tag warn">nobody</span>}
+          </div>
+        </div>
+        <div className="mt">
+          <div className="lbl">Due</div>
+          <div className="v mono">{dayOf(item.due) || 'Not set'}</div>
+          {isLate(item) ? <span className="tag bad">late</span> : null}
+        </div>
+        <div className="mt">
+          <div className="lbl">State</div>
+          <div className="v"><span className={'tag ' + (TAG[item.state] || 'mute')}>{LABEL[item.state]}</span></div>
+        </div>
+        <div className="ac">
+          {direct.map((v) => (
+            <button key={v.name} className={'btn sm ' + (v.name === 'start' ? '' : 'dark')}
+              onClick={() => move(item._id, v.name, { link: item.driveLink })}>{v.label}</button>
+          ))}
+          {detail.map((v) => <Link key={v.name} className="btn sm" href={'/work/' + item._id}>{v.label}</Link>)}
+          <Link className="btn sm" href={'/projects/' + item.projectSlug}>Project</Link>
+          {allowed.length === 0 ? <Link className="btn sm" href={'/work/' + item._id}>Open it</Link> : null}
+        </div>
+        {note[item._id] ? <div className="work-row-error">{note[item._id]}</div> : null}
+      </div>
+    );
+  }
 
   return (
     <>
-      {canCreate ? (
-        adding
-          ? <NewWork projects={projects} people={people} who={who} onCancel={() => setAdding(false)} onDone={() => { setAdding(false); load(); }} />
-          : <div style={{ marginTop: 18 }}><button className="btn dark" onClick={() => setAdding(true)}>Open new work</button></div>
-      ) : null}
+      <div className="head">
+        <div>
+          <div className="eyebrow">Production and handoffs</div>
+          <h1>Work</h1>
+          <p className="lede">Your work, the handoffs coming to you and the exact verbs that move each item forward.</p>
+        </div>
+        {canCreate ? <button className="btn dark" onClick={() => setAdding(true)}>Add work item</button> : null}
+      </div>
 
-      <div className="tabs">
+      <div className="kpis">
+        <div className="kpi"><div className="lbl">Assigned to you</div><div className="v">{items ? mine.length : '...'}</div><div className="n">your active list</div></div>
+        <div className="kpi"><span className="d a" /><div className="lbl">Coming to you</div><div className="v">{items ? coming.length : '...'}</div><div className="n">someone else owns it now</div></div>
+        <div className="kpi"><span className="d r" /><div className="lbl">Sitting at a gate</div><div className="v">{items ? atGate.length : '...'}</div><div className="n bad">within your visible scope</div></div>
+        <div className="kpi"><div className="lbl">Your rights</div><div className="v sm">{can(who, 'generate') === 'yes' ? 'Full generation' : can(who, 'generate')}</div><div className="n">from the permissions table</div></div>
+      </div>
+
+      {adding ? <NewWork projects={projects} people={people} who={who} onCancel={() => setAdding(false)} onDone={() => { setAdding(false); load(); }} /> : null}
+
+      <div className="tabsrow">
         {tabs.map(([k, l]) => (
-          <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>
+          <button key={k} className={'tb ' + (tab === k ? 'on' : '')} onClick={() => setTab(k)}>
             {l}{items ? ' (' + scopeFilter(items, who, k).length + ')' : ''}
           </button>))}
       </div>
 
-      <div className="panel" style={{ marginTop: 0, borderTopLeftRadius: 0, borderTopRightRadius: 0 }}>
-        {err ? <div className="row"><span className="dot no" /><div className="t"><b>Could not load work</b><span className="err">{err}</span></div></div> : null}
-        {!items && !err ? <div className="empty">Loading.</div> : null}
-        {items ? (
-          <table className="tbl">
-            <thead><tr><th>What</th><th style={{ width: 150 }}>Project</th><th style={{ width: 108 }}>Who</th><th style={{ width: 84 }}>Due</th><th style={{ width: 118 }}>State</th><th style={{ width: 230 }}>Next step</th></tr></thead>
-            <tbody>
-              {shown.map((i) => {
-                const vs = verbsFor(i, who).filter((v) => v.ok && !v.needNote && !v.needWho);
-                return (
-                  <tr key={i._id}>
-                    <td><Link href={'/work/' + i._id}>{i.title}</Link>
-                      <div style={{ color: 'var(--faint)', fontSize: 12 }}>{KINDS[i.kind]?.label || i.kind}
-                        {i.firstTime ? <span className="tag info" style={{ marginLeft: 5 }}>first time</span> : null}</div></td>
-                    <td>{i.projectName}<div style={{ color: 'var(--faint)', fontSize: 12 }}>{i.client}</div></td>
-                    <td>{(() => {
-                      const ch = canAssign(i, who);
-                      if (!ch.ok) return i.assigneeName || <span className="tag warn">nobody</span>;
-                      const list = ch.list === null ? people : people.filter((p) => ch.list.includes(p.slug));
-                      return (
-                        <select className="inp" style={{ padding: '4px 6px', fontSize: 12.5 }}
-                          value={i.assignee || ''} onChange={(e) => assign(i._id, e.target.value)}>
-                          <option value="">Nobody</option>
-                          {list.map((p) => <option key={p.slug} value={p.slug}>{p.name}</option>)}
-                        </select>);
-                    })()}</td>
-                    <td className="mono">{dayOf(i.due) || '—'}
-                      {isLate(i) ? <div><span className="tag bad">late</span></div> : null}</td>
-                    <td><span className={'tag ' + (TAG[i.state] || 'mute')}>{LABEL[i.state]}</span></td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                        {vs.map((v) => (
-                          <button key={v.name} className="btn sm" onClick={() => move(i._id, v.name, { link: i.driveLink })}>{v.label}</button>))}
-                        {vs.length === 0 ? <Link className="btn sm" href={'/work/' + i._id}>Open it</Link> : null}
-                      </div>
-                      {note[i._id] ? <div style={{ color: 'var(--bad)', fontSize: 12, marginTop: 5 }}>{note[i._id]}</div> : null}
-                    </td>
-                  </tr>);
-              })}
-              {shown.length === 0 ? <tr><td colSpan={6} className="empty">
-                {tab === 'mine' ? 'Nothing assigned to you.' : tab === 'tome' ? 'Nothing waiting on your sign off.' : 'Nothing here.'}
-              </td></tr> : null}
-            </tbody>
-          </table>
-        ) : null}
-      </div>
+      {err ? <div className="panel"><div className="row"><span className="dot no" /><div className="t"><b>Could not load work</b><span className="err">{err}</span></div></div></div> : null}
+      {!items && !err ? <div className="panel"><div className="empty">Loading.</div></div> : null}
+      {items && ['team', 'all'].includes(tab) ? (
+        Object.keys(grouped).length ? Object.keys(grouped).map((key) => {
+          const first = grouped[key][0];
+          return (
+            <div className="panel work-project" key={key}>
+              <header><div><h2>{first.client} · {first.projectName}</h2><div className="sub2">{grouped[key].length} active item{grouped[key].length === 1 ? '' : 's'}</div></div>
+                <Link className="btn sm" href={'/projects/' + first.projectSlug}>Open project</Link></header>
+              {grouped[key].map((i) => <WorkRow key={i._id} item={i} showProject={false} />)}
+            </div>
+          );
+        }) : <div className="panel"><div className="empty">Nothing in this view.</div></div>
+      ) : null}
+      {items && !['team', 'all'].includes(tab) ? (
+        <div className="panel work-project">
+          <header><div><h2>{tab === 'mine' ? 'Assigned to you' : 'Waiting on someone else, then you'}</h2>
+            <div className="sub2">Each row shows every action your role can take right now.</div></div></header>
+          {shown.length ? shown.map((i) => <WorkRow key={i._id} item={i} showProject />)
+            : <div className="empty">{tab === 'mine' ? 'Nothing assigned to you.' : 'Nothing waiting on your sign off.'}</div>}
+        </div>
+      ) : null}
       <p className="note">
         Only actions you are allowed to take appear. Anything needing a note or a client name opens
         on the item's own page, because a one word button is not a record.
