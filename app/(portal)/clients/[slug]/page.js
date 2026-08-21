@@ -1,0 +1,56 @@
+import Link from 'next/link';
+import { sanity } from '../../../../lib/sanity';
+import { meSlug } from '../../../../lib/me';
+import { pageAllowed } from '../../../../lib/guard';
+import NotYours from '../../../../components/NotYours';
+import ClientDetail from '../../../../components/ClientDetail';
+import { evaluate } from '../../../../lib/onboard';
+
+export const dynamic = 'force-dynamic';
+
+export default async function Page({ params }) {
+  const who = meSlug();
+  if (!pageAllowed(who, '/clients')) return <NotYours what="Clients" />;
+
+  const today = new Date().toISOString().slice(0, 10);
+  let c = null, error = null, links = 0;
+  try {
+    c = await sanity(true).fetch(
+      `*[_type=="client" && slug==$s][0]{
+        slug, name, code, note, driveFolderId, logoUrl, contacts, obligations, onbManual,
+        channel, turnaround, renewal, active,
+        "projects": *[_type=="project" && references(^._id)]|order(name asc){
+          slug, name, type, cadence, voice, prd, contract, deliverables,
+          "owner": owner->name, "cals": count(calendarSources[current==true]),
+          "workApproved": count(*[_type=="work" && references(^._id) && state in ["approved","done"]])},
+        "briefs": count(*[_type=="work" && project->client->slug == ^.slug && defined(brief) && brief != ""]),
+        "late": count(*[_type=="work" && project->client->slug == ^.slug
+              && !(state in ["approved","done"]) && defined(due) && due < $today]),
+        "escalations": count(*[_type=="escalation" && project->client->slug == ^.slug && !defined(resolvedAt)]),
+        "requests": count(*[_type=="request" && client->slug == ^.slug && state=="new"])
+      }`, { s: params.slug, today });
+
+    if (c) {
+      const slugs = (c.projects || []).map((p) => p.slug);
+      const weeks = await sanity(true).fetch(
+        '*[_type=="weekReview" && projectSlug in $s]{projectSlug, clientDecisions}', { s: slugs });
+      const approvedBy = {};
+      for (const w of weeks) {
+        approvedBy[w.projectSlug] = (approvedBy[w.projectSlug] || 0)
+          + (w.clientDecisions || []).filter((d) => d.decision === 'approved').length;
+      }
+      c.projects = (c.projects || []).map((p) => ({
+        ...p,
+        target: (p.deliverables || []).reduce((a, d) => a + (+d.target || 0), 0),
+        approved: (approvedBy[p.slug] || 0) + (p.workApproved || 0),
+      }));
+      links = await sanity(true).fetch(
+        'count(*[_type=="weekReview" && defined(clientToken) && projectSlug in $s])', { s: slugs });
+    }
+  } catch (e) { error = e.message; }
+
+  if (error) return <><h1>Client</h1><div className="alert">Sanity did not answer. <code>{error}</code></div></>;
+  if (!c) return <><h1>Not found</h1><p className="lede"><Link href="/clients">Back to clients</Link></p></>;
+
+  return <ClientDetail c={c} onb={evaluate(c)} links={links} canEdit={['himanshu', 'aashif'].includes(who)} />;
+}

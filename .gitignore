@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+.DS_Store
+
+# secrets, never commit these
+.env
+.env.local
+*.rtf
+_to_delete/
+
+# service account keys: ignore every json except the ones npm needs
+*.json
+!package.json
+!package-lock.json
+!jsconfig.json
