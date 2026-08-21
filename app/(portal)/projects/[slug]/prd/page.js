@@ -12,7 +12,10 @@ export default async function Page({ params }) {
   let p = null, error = null;
   try {
     p = await sanity(true).fetch(
-      `*[_type=="project" && slug==$s][0]{slug,name,type,prd,prdBy,prdAt,prdComments,"client":client->name}`,
+      `*[_type=="project" && slug==$s][0]{
+        slug,name,type,prd,prdBy,prdAt,prdComments,"client":client->name,
+        "workCount":count(*[_type=="work" && references(^._id)])
+      }`,
       { s: params.slug });
   } catch (e) { error = e.message; }
 
@@ -29,7 +32,7 @@ export default async function Page({ params }) {
         One document per project: what it is, what has been decided, what is still open.
         {p.prdAt ? ' Last changed by ' + p.prdBy + '.' : ' Nothing written yet.'}
       </p>
-      <ProjectTabs slug={p.slug} type={p.type} on="/prd" />
+      <ProjectTabs slug={p.slug} type={p.type} on="/prd" workCount={p.workCount} />
       <Prd slug={p.slug} initial={p.prd} comments={p.prdComments || []} rights={rights} />
     </>
   );

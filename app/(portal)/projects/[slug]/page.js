@@ -57,7 +57,7 @@ function timelineOf(p) {
   return 'Timeline not set';
 }
 
-export default async function Project({ params }) {
+export default async function Project({ params, searchParams }) {
   let p = null, activity = [], error = null, who = { slug: 'himanshu' };
   try {
     who = await me();
@@ -66,6 +66,7 @@ export default async function Project({ params }) {
         _id,slug,name,type,cadence,status,subtitle,term,timeline,stage,ideasDoc,ideasLink,
         calendarSources,deliverables,contract,milestones,prd,voice,
         "client":client->{name,code,driveFolderId},"owner":owner->{name,slug},
+        "workCount": count(*[_type=="work" && references(^._id)]),
         "work": *[_type=="work" && references(^._id)]|order(due asc)[0...200]{
           _id,title,kind,state,due,deliverable,feedback,"assigneeName":assignee->name},
         "reviews": *[_type=="weekReview" && projectSlug == ^.slug]|order(week desc)[0...100]{
@@ -122,5 +123,9 @@ export default async function Project({ params }) {
     canMarkIdeas: ['himanshu', 'aashif', 'priyanka'].includes(who.slug),
   };
 
-  return <ProjectDetail p={p} activity={activity} perms={perms} />;
+  const requestedTab = searchParams && searchParams.tab;
+  const activeTab = ['overview', 'ideas', 'deliverables', 'work', 'activity'].includes(requestedTab)
+    ? requestedTab : 'overview';
+
+  return <ProjectDetail p={p} activity={activity} perms={perms} activeTab={activeTab} />;
 }
