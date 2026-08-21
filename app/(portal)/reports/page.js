@@ -17,47 +17,66 @@ export default async function Reports() {
     changes: a.changes + r.totals.changes, waiting: a.waiting + r.totals.waiting,
   }), { shipped: 0, approved: 0, changes: 0, waiting: 0 });
 
+  const month = new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  const reportState = (r) => {
+    if (!r.totals.shipped) return ['Not started', 'mute'];
+    if (r.totals.changes) return ['Needs attention', 'bad'];
+    if (r.totals.waiting) return ['With client', 'warn'];
+    if (r.totals.approved) return ['Approval record ready', 'ok'];
+    return ['In progress', 'info'];
+  };
+
   return (
     <>
-      <div className="eyebrow">Records</div>
-      <h1>Reports</h1>
-      <p className="lede">What has actually been signed off, per client. Only client approvals count.</p>
+      <div className="head">
+        <div>
+          <div className="eyebrow">Monthly reporting</div>
+          <h1>Reports</h1>
+          <p className="lede">
+            The team still builds reports in Drive. CN Ops keeps the operational approval record and
+            shows exactly what the client has signed off.
+          </p>
+        </div>
+        <button className="btn dark" disabled title="Monthly report creation is not exposed by the current API">New report</button>
+      </div>
       {error ? <div className="alert">Sanity did not answer. <code>{error}</code></div> : null}
 
       <div className="panel">
-        <header><h2>Across every retainer</h2></header>
-        <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--line2)' }}>
-          <div className="stat">
-            <div><b>{t.shipped}</b><span>submitted</span></div>
-            <div><b style={{ color: 'var(--ok)' }}>{t.approved}</b><span>approved</span></div>
-            <div><b style={{ color: t.changes ? 'var(--bad)' : undefined }}>{t.changes}</b><span>changes asked</span></div>
-            <div><b style={{ color: t.waiting ? 'var(--warn)' : undefined }}>{t.waiting}</b><span>waiting on the client</span></div>
-          </div>
-        </div>
+        <header>
+          <div><h2>This month</h2><div className="sub2">Report links, due dates and report QC are not exposed by the current API.</div></div>
+        </header>
         <table className="tbl">
-          <thead><tr><th>Project</th><th>Client</th><th>Owner</th><th>Weeks shipped</th><th>Submitted</th><th>Approved</th><th>Changes</th><th>Waiting</th><th /></tr></thead>
+          <thead><tr><th>Client</th><th>Project</th><th>Month</th><th>Due</th><th>Owner</th><th>Drive link</th><th>State</th><th /></tr></thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.slug}>
-                <td><Link href={'/projects/' + r.slug}>{r.name}</Link></td>
-                <td>{r.client}</td>
-                <td>{r.owner || '—'}</td>
-                <td>{r.rows.filter((w) => w.shipAt).length}</td>
-                <td>{r.totals.shipped}</td>
-                <td>{r.totals.approved ? <span className="tag ok">{r.totals.approved}</span> : '—'}</td>
-                <td>{r.totals.changes ? <span className="tag bad">{r.totals.changes}</span> : '—'}</td>
-                <td>{r.totals.waiting ? <span className="tag warn">{r.totals.waiting}</span> : '—'}</td>
-                <td><Link className="btn sm" href={'/projects/' + r.slug + '/pack'}>Record</Link></td>
-              </tr>
-            ))}
-            {rows.length === 0 ? <tr><td colSpan={9} className="empty">No social projects yet.</td></tr> : null}
+            {rows.map((r) => {
+              const state = reportState(r);
+              return (
+                <tr key={r.slug} className={r.totals.changes ? 'flag' : ''}>
+                  <td className="b">{r.client}</td>
+                  <td><Link href={'/projects/' + r.slug}>{r.name}</Link></td>
+                  <td className="dim">{month}</td>
+                  <td className="dim">Not recorded</td>
+                  <td className="dim">{r.owner || 'Not assigned'}</td>
+                  <td className="dim">Not linked</td>
+                  <td><span className={'tag ' + state[1]}>{state[0]}</span></td>
+                  <td><Link className="btn sm" href={'/projects/' + r.slug + '/pack'}>Approval record</Link></td>
+                </tr>);
+            })}
+            {rows.length === 0 ? <tr><td colSpan={8} className="empty">No social projects yet.</td></tr> : null}
           </tbody>
         </table>
       </div>
-      <p className="note">
-        Nothing here is typed in. Submitted counts the posts in a week when its ship gate was signed,
-        approved counts what the client pressed approve on. The gap is time on their side.
-      </p>
+
+      <div className="stat" style={{ marginBottom: 14 }}>
+        <div><b>{t.shipped}</b><span>submitted</span></div>
+        <div><b style={{ color: 'var(--ok)' }}>{t.approved}</b><span>approved</span></div>
+        <div><b style={{ color: t.changes ? 'var(--bad)' : undefined }}>{t.changes}</b><span>changes asked</span></div>
+        <div><b style={{ color: t.waiting ? 'var(--warn)' : undefined }}>{t.waiting}</b><span>waiting on client</span></div>
+      </div>
+
+      <div className="callout">
+        <span><b>Report QC needs a report record.</b> The current API does not expose the Drive link, source figures, due date or report approval, so this screen does not pretend that content approval is report approval.</span>
+      </div>
     </>
   );
 }

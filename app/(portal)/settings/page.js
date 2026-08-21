@@ -5,6 +5,7 @@ import { pageAllowed } from '../../../lib/guard';
 import NotYours from '../../../components/NotYours';
 import Settings from '../../../components/Settings';
 import { BANNED } from '../../../lib/qc';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,12 +31,14 @@ export default async function Page() {
 
   return (
     <>
-      <div className="eyebrow">System</div>
-      <h1>Settings</h1>
-      <p className="lede">
-        The rules the quality checks run on. Everything here is deliberate: no setting turns a check off,
-        only what it looks for.
-      </p>
+      <div className="head">
+        <div>
+          <div className="eyebrow">Standing rules</div>
+          <h1>Settings</h1>
+          <p className="lede">The rules the system applies automatically, plus the quality and voice controls already in use.</p>
+        </div>
+        <div className="rowb"><Link className="btn" href="/mobile">Mobile scope</Link><Link className="btn dark" href="/setup">Connections</Link></div>
+      </div>
       {error ? <div className="alert">Sanity did not answer. <code>{error}</code></div> : null}
       <Settings house={house} projects={projects} limits={LIMITS} builtIn={BANNED} canEdit={can(who, 'settings') === 'yes'} />
     </>

@@ -1,7 +1,7 @@
-import ClientReview from '../../../components/ClientReview';
+import ClientReviewV7 from '../../../components/ClientReviewV7';
 
 export const metadata = { title: 'Content for review' };
 
 export default function ClientPage({ params }) {
-  return <ClientReview token={params.token} />;
+  return <ClientReviewV7 token={params.token} />;
 }

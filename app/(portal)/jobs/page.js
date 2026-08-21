@@ -3,6 +3,7 @@ import { sanity } from '../../../lib/sanity';
 import { meSlug } from '../../../lib/me';
 import { pageAllowed } from '../../../lib/guard';
 import NotYours from '../../../components/NotYours';
+import JobCards from '../../../components/JobCards';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +19,7 @@ const ago = (t) => {
 export default async function Jobs() {
   if (!pageAllowed(meSlug(), '/jobs')) return <NotYours what="Job health" />;
 
-  let projects = [], activity = [], error = null;
+  let projects = [], activity = [], settings = null, error = null;
   try {
     projects = await sanity(true).fetch(
       `*[_type=="project" && type=="social"]|order(name asc){slug,name,
@@ -26,46 +27,68 @@ export default async function Jobs() {
         "lastCheck": *[_type=="weekReview" && projectSlug==^.slug && defined(qcAt)]|order(qcAt desc)[0].qcAt,
         "lastShip": *[_type=="weekReview" && projectSlug==^.slug && defined(shipGate.at)]|order(week desc)[0].shipGate.at}`);
     activity = await sanity(true).fetch('*[_type=="activity"]|order(at desc)[0...40]{_id,at,who,what,detail,target}');
+    settings = await sanity(true).fetch('*[_id=="settings.house"][0]{digestHour}');
   } catch (e) { error = e.message; }
+
+  const latest = (field) => projects.map((p) => p[field]).filter(Boolean).sort().slice(-1)[0] || null;
+  const missingCalendars = projects.filter((p) => !p.calendars).length;
+  const digestHour = settings?.digestHour != null ? settings.digestHour : 8;
+  const cards = [
+    {
+      id: 'calendar', name: 'Calendar reader', schedule: 'Manual and page load',
+      status: missingCalendars ? 'Needs attention' : 'Ready', last: latest('lastCheck'), next: 'Run on demand',
+      result: missingCalendars ? missingCalendars + ' social project(s) have no current calendar' : projects.length + ' social project(s) configured',
+      endpoint: '/api/week',
+    },
+    {
+      id: 'connections', name: 'Connections health check', schedule: 'Manual', status: 'Ready',
+      last: null, next: 'Run on demand', result: 'Sanity, Sheets, Drive and model keys', endpoint: '/api/health',
+    },
+    {
+      id: 'rollup', name: 'Approval rollup', schedule: 'On demand', status: 'Ready',
+      last: latest('lastShip'), next: 'Run on demand', result: 'Reads shipped weeks and client decisions', endpoint: '/api/rollup',
+    },
+    {
+      id: 'qc', name: 'Quality checks', schedule: 'From each week review', status: latest('lastCheck') ? 'Healthy' : 'Waiting',
+      last: latest('lastCheck'), next: 'From the week review', result: latest('lastCheck') ? 'Last result is recorded' : 'No recorded run', endpoint: null,
+    },
+    {
+      id: 'digest', name: 'Morning digest', schedule: String(digestHour).padStart(2, '0') + ':00 GST', status: 'Scheduled',
+      last: null, next: 'After hosting is connected', result: 'No scheduled runner yet', endpoint: null,
+    },
+    {
+      id: 'nudge', name: 'Same-day blocked nudge', schedule: 'Same day', status: 'Scheduled',
+      last: null, next: 'After hosting is connected', result: 'No scheduled runner yet', endpoint: null,
+    },
+  ];
+  const digests = activity.filter((a) => String(a.what || '').toLowerCase().includes('digest'));
 
   return (
     <>
-      <div className="eyebrow">System</div>
-      <h1>Job health</h1>
-      <p className="lede">
-        Whether the machinery is actually running, and what it did last.
-      </p>
-      {error ? <div className="alert">Sanity did not answer. <code>{error}</code></div> : null}
-
-      <div className="panel">
-        <header><h2>Scheduled jobs</h2><span className="tag warn">none running</span></header>
-        <div style={{ padding: '14px 16px', fontSize: 13.5, lineHeight: 1.6 }}>
-          There are no scheduled jobs yet, and there cannot be while this runs on a laptop. Two are
-          waiting to be switched on the day it is hosted: the morning digest, and the same day nudge
-          when something dated is blocked. The digest time is already set in <Link href="/settings">Settings</Link>.
+      <div className="head">
+        <div>
+          <div className="eyebrow">Monitoring and recovery</div>
+          <h1>Job health</h1>
+          <p className="lede">Each job shows its last evidence, next run, result and manual recovery path.</p>
+        </div>
+        <div className="rowb">
+          <button className="btn" disabled title="No failure-alert endpoint exists yet">Test failure alert</button>
+          <a className="btn dark" href="/jobs">Refresh</a>
         </div>
       </div>
+      {error ? <div className="alert">Sanity did not answer. <code>{error}</code></div> : null}
+
+      <div className="alertbar">
+        <span><b>No daily heartbeat is being written yet.</b> Manual reads can run now, while the digest and same-day nudge remain waiting for hosted scheduling.</span>
+        <Link className="btn sm" href="/setup">Check connections</Link>
+      </div>
+
+      <JobCards cards={cards} />
 
       <div className="panel">
-        <header><h2>Calendars, and when they were last checked</h2></header>
-        <table className="tbl">
-          <thead><tr><th>Project</th><th style={{ width: 130 }}>Calendars linked</th><th style={{ width: 210 }}>Checks last run</th><th style={{ width: 210 }}>Last shipped</th><th style={{ width: 120 }} /></tr></thead>
-          <tbody>
-            {projects.map((p) => (
-              <tr key={p.slug}>
-                <td>{p.name}</td>
-                <td>{p.calendars ? <span className="tag ok">{p.calendars}</span> : <span className="tag bad">none</span>}</td>
-                <td>{p.lastCheck ? <>{when(p.lastCheck)}<div style={{ color: 'var(--faint)', fontSize: 12 }}>{ago(p.lastCheck)}</div></> : <span className="tag mute">never</span>}</td>
-                <td>{p.lastShip ? <>{when(p.lastShip)}<div style={{ color: 'var(--faint)', fontSize: 12 }}>{ago(p.lastShip)}</div></> : <span className="tag mute">never</span>}</td>
-                <td><Link className="btn sm" href={'/projects/' + p.slug + '/review'}>The week</Link></td>
-              </tr>))}
-            {projects.length === 0 ? <tr><td colSpan={5} className="empty">No social projects.</td></tr> : null}
-          </tbody>
-        </table>
-        <div style={{ padding: '10px 16px', borderTop: '1px solid var(--line2)', fontSize: 12.5, color: 'var(--faint)' }}>
-          Whether Google is reachable at all is on <Link href="/setup">Connections</Link>, which tests every
-          sheet and folder live.
-        </div>
+        <header><h2>Digest history</h2><span className="hint">the push channel once scheduling is connected</span></header>
+        {digests.map((d) => <div key={d._id} className="digestRow"><div className="lbl">{when(d.at)}</div><div>{d.detail || d.what}</div></div>)}
+        {digests.length === 0 ? <div className="empty">No digest run has been recorded.</div> : null}
       </div>
 
       <div className="panel">
@@ -78,7 +101,7 @@ export default async function Jobs() {
                 <td className="mono">{when(a.at)}</td>
                 <td>{a.who}</td>
                 <td>{a.what}</td>
-                <td style={{ color: 'var(--muted)' }}>{a.detail || '—'}
+                <td style={{ color: 'var(--muted)' }}>{a.detail || 'No detail'}
                   {a.target ? <div className="mono" style={{ color: 'var(--faint)', fontSize: 11.5 }}>{a.target}</div> : null}</td>
               </tr>))}
             {activity.length === 0 ? <tr><td colSpan={4} className="empty">Nothing logged yet.</td></tr> : null}

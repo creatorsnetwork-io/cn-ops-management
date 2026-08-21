@@ -13,8 +13,14 @@ const dayOf = (w) => (w ? new Date(w + 'T00:00:00Z').toLocaleDateString('en-GB',
 export default async function Archive() {
   if (!pageAllowed(meSlug(), '/archive')) return <NotYours what="Archive" />;
 
-  let weeks = [], work = [], requests = [], escalations = [], error = null;
+  let projects = [], weeks = [], work = [], requests = [], escalations = [], error = null;
   try {
+    projects = await sanity(true).fetch(
+      `*[_type=="project" && status in ["closed","archived","inactive"]]|order(_updatedAt desc){
+        slug,name,type,status,closedAt,_updatedAt,deliverables,
+        "client":client->name,
+        "approved":count(*[_type=="work" && project._ref==^._id && state in ["approved","done"]]),
+        "workTotal":count(*[_type=="work" && project._ref==^._id])}`);
     weeks = await sanity(true).fetch(
       `*[_type=="weekReview" && defined(shipGate.at)]|order(week desc)[0...60]{
         week, projectSlug, shipped, clientDecisions, "shipAt": shipGate.at, "shipBy": shipGate.by,
@@ -30,12 +36,53 @@ export default async function Archive() {
         _id,at,who,reason,resolution,outcome,resolvedBy,resolvedAt,"ownerName":owner->name,"projectName":project->name}`);
   } catch (e) { error = e.message; }
 
+  const typeName = { social: 'Social', web: 'Website', seo: 'SEO', campaign: 'Campaign', video: 'Film and video' };
+
   return (
     <>
-      <div className="eyebrow">Records</div>
-      <h1>Archive</h1>
-      <p className="lede">Finished things, kept because the useful part of a year is what actually happened.</p>
+      <div className="head">
+        <div>
+          <div className="eyebrow">Closed and kept</div>
+          <h1>Archive</h1>
+          <p className="lede">Closed projects stay readable and searchable, out of active lists, with their operational record intact.</p>
+        </div>
+      </div>
       {error ? <div className="alert">Sanity did not answer. <code>{error}</code></div> : null}
+
+      <div className="panel">
+        <header><h2>Closing requires three things</h2></header>
+        <table className="tbl"><tbody>
+          <tr><td className="b" style={{ width: 210 }}>Deliverables reconciled</td><td className="dim">Approved against committed, with any shortfall explained in writing</td></tr>
+          <tr><td className="b">Final files linked</td><td className="dim">Masters, exports and the last approved versions</td></tr>
+          <tr><td className="b">Dispute pack generated</td><td className="dim">Timeline, approval snapshots, feedback verbatim and baseline versions</td></tr>
+        </tbody></table>
+      </div>
+
+      <div className="panel">
+        <header><h2>Archived, {projects.length}</h2></header>
+        <table className="tbl">
+          <thead><tr><th>Client</th><th>Project</th><th>Service</th><th>Closed</th><th>Delivered</th><th /></tr></thead>
+          <tbody>
+            {projects.map((p) => (
+              <tr key={p.slug}>
+                <td className="b">{p.client || 'Not recorded'}</td>
+                <td>{p.name}</td>
+                <td className="dim">{typeName[p.type] || p.type || 'Not recorded'}</td>
+                <td className="dim">{p.closedAt ? when(p.closedAt) : 'Date not recorded'}</td>
+                <td className="dim">{p.approved} of {p.workTotal} work items approved</td>
+                <td className="rowb">
+                  <Link className="btn sm" href={'/projects/' + p.slug + '/pack'}>Dispute pack</Link>
+                  <Link className="btn sm" href={'/projects/' + p.slug}>Open</Link>
+                </td>
+              </tr>))}
+            {projects.length === 0 ? <tr><td colSpan={6} className="empty">No project has a closed or archived status yet.</td></tr> : null}
+          </tbody>
+        </table>
+        <div className="panelNote">The current project API cannot close a project or record a closure date. Existing non-active projects appear here; no closure values are invented.</div>
+      </div>
+
+      <details className="recordShelf">
+        <summary>Operational records kept alongside archived projects</summary>
 
       <div className="panel">
         <header><h2>Weeks that shipped</h2><span className="pill">{weeks.length}</span></header>
@@ -48,7 +95,7 @@ export default async function Archive() {
                 <tr key={w.projectSlug + w.week}>
                   <td>{w.projectName}<div style={{ color: 'var(--faint)', fontSize: 12 }}>{w.client}</div></td>
                   <td className="mono">{dayOf(w.week)}</td>
-                  <td>{w.shipped || '—'}</td>
+                  <td>{w.shipped || 'Not recorded'}</td>
                   <td>{ap ? <span className="tag ok">{ap}</span> : <span className="tag mute">none</span>}</td>
                   <td>{w.shipBy}, {when(w.shipAt)}
                     {w.override ? <span className="tag warn" style={{ marginLeft: 6 }}>override</span> : null}</td>
@@ -70,7 +117,7 @@ export default async function Archive() {
                 <td><Link href={'/work/' + w._id}>{w.title}</Link></td>
                 <td>{KINDS[w.kind]?.label || w.kind}</td>
                 <td>{w.projectName}</td>
-                <td>{w.assigneeName || '—'}</td>
+                <td>{w.assigneeName || 'Not recorded'}</td>
                 <td>{w.approvedBy ? w.approvedBy + ', ' + when(w.approvedAt) : <span style={{ color: 'var(--faint)' }}>not recorded</span>}</td>
               </tr>))}
             {work.length === 0 ? <tr><td colSpan={5} className="empty">Nothing closed yet.</td></tr> : null}
@@ -90,7 +137,7 @@ export default async function Archive() {
                 <td><span className={'tag ' + (r.inScope === 'no' ? 'bad' : r.inScope === 'yes' ? 'ok' : 'warn')}>
                   {r.inScope === 'no' ? 'outside' : r.inScope === 'yes' ? 'inside' : 'unclear'}</span></td>
                 <td><span className={'tag ' + (r.state === 'accepted' ? 'ok' : r.state === 'declined' ? 'bad' : 'warn')}>{r.state}</span></td>
-                <td>{r.decision || '—'}{r.workId ? <div><Link href={'/work/' + r.workId} style={{ fontSize: 12.5 }}>the work it became</Link></div> : null}</td>
+                <td>{r.decision || 'No reason recorded'}{r.workId ? <div><Link href={'/work/' + r.workId} style={{ fontSize: 12.5 }}>the work it became</Link></div> : null}</td>
               </tr>))}
             {requests.length === 0 ? <tr><td colSpan={5} className="empty">Nothing decided yet.</td></tr> : null}
           </tbody>
@@ -106,7 +153,7 @@ export default async function Archive() {
               <tr key={e._id}>
                 <td>{when(e.at)}<div style={{ color: 'var(--faint)', fontSize: 12 }}>{e.who}</div></td>
                 <td>{e.reason}<div style={{ color: 'var(--faint)', fontSize: 12 }}>{e.projectName}</div></td>
-                <td>{e.ownerName || '—'}</td>
+                <td>{e.ownerName || 'Not recorded'}</td>
                 <td><span className="tag mute">{e.outcome || 'fixed'}</span></td>
                 <td>{e.resolution}<div style={{ color: 'var(--faint)', fontSize: 12 }}>closed by {e.resolvedBy}, {when(e.resolvedAt)}</div></td>
               </tr>))}
@@ -114,6 +161,7 @@ export default async function Archive() {
           </tbody>
         </table>
       </div>
+      </details>
     </>
   );
 }

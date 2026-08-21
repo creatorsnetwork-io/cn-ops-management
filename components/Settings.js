@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import Link from 'next/link';
 
 function Limits({ initial, fallback, canEdit, onSave }) {
   const [rows, setRows] = useState(initial.length ? initial : fallback.map((f) => ({
@@ -123,6 +124,40 @@ export default function Settings({ house, projects, canEdit, limits, builtIn }) 
 
   return (
     <>
+      <div className="grid2">
+        <div className="panel">
+          <header><h2>Rules</h2></header>
+          <table className="tbl"><tbody>
+            <tr><td className="b" style={{ width: 225 }}>Lead time on unplanned requests</td><td>Due date set per request<div className="note">Fault handling remains in the live request flow</div></td></tr>
+            <tr><td className="b">Revision rounds included</td><td>Not stored globally<div className="note">Work and feedback keep their live round accounting</div></td></tr>
+            <tr><td className="b">Daily digest</td><td>{String(hour).padStart(2, '0')}:00 GST<div className="note">Scheduled delivery starts after hosting</div></td></tr>
+            <tr><td className="b">Image generation cap</td><td>Not stored<div className="note">No usage-cap field in the current settings API</div></td></tr>
+            <tr><td className="b">Calendar recheck</td><td>On demand<div className="note">Manual reads use the existing calendar endpoint</div></td></tr>
+            <tr><td className="b">Record retention</td><td>Append only activity<div className="note">Operational records survive project closure</div></td></tr>
+          </tbody></table>
+        </div>
+        <div>
+          <div className="panel">
+            <header><h2>Integrations</h2><Link className="btn sm" href="/setup">Run live checks</Link></header>
+            <table className="tbl"><tbody>
+              {[
+                ['Google Sheets', 'Read calendars; writes use empty cells only'],
+                ['Google Drive', 'Folders, files and external previews'],
+                ['Google Docs', 'Generated copy and working documents'],
+                ['OpenAI', 'Company key for assisted creation'],
+                ['Gemini', 'Meeting-note workflow'],
+                ['WhatsApp digest', 'Outbound runner not hosted yet'],
+              ].map((r) => <tr key={r[0]}><td className="b">{r[0]}</td><td className="dim">{r[1]}</td><td><span className="tag mute">Check live</span></td></tr>)}
+            </tbody></table>
+          </div>
+          <div className="panel">
+            <header><h2>Who can change settings</h2></header>
+            <div className="pad"><p className="note">Himanshu and Aashif can edit. Everyone else with a future view route remains read only. Every save continues through the existing settings permission.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <div className="sectionLabel">Quality and voice controls</div>
       <div className="panel">
         <header><h2>Phrases built into the checks</h2><span className="pill">{(builtIn || []).length}, not editable</span></header>
         <div style={{ padding: '13px 16px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
