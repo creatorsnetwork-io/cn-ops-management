@@ -53,7 +53,7 @@ export default function ProjectDetail({ p, activity, perms, activeTab }) {
         <div><div className="lbl">Client access</div><div className="v">{p.hasClientAccess ? 'Review link live' : 'Not invited'}</div><div className="s">No internal notes exposed</div></div>
       </div>
 
-      <ProjectTabs slug={p.slug} type={p.type} on="" activeTab={tab} workCount={(p.work || []).length} />
+      <ProjectTabs slug={p.slug} type={p.type} on="" activeTab={tab} workCount={p.workCount} />
 
       {tab === 'overview' ? <>
         <div className="panel">

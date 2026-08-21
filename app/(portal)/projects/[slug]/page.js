@@ -66,6 +66,7 @@ export default async function Project({ params, searchParams }) {
         _id,slug,name,type,cadence,status,subtitle,term,timeline,stage,ideasDoc,ideasLink,
         calendarSources,deliverables,contract,milestones,prd,voice,
         "client":client->{name,code,driveFolderId},"owner":owner->{name,slug},
+        "workCount": count(*[_type=="work" && references(^._id)]),
         "work": *[_type=="work" && references(^._id)]|order(due asc)[0...200]{
           _id,title,kind,state,due,deliverable,feedback,"assigneeName":assignee->name},
         "reviews": *[_type=="weekReview" && projectSlug == ^.slug]|order(week desc)[0...100]{
