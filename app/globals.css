@@ -451,6 +451,10 @@ textarea{min-height:70px}
 .vtoggle button{background:#fff;border:none;cursor:pointer}
 .fchip{cursor:pointer}
 
+/* Project detail keeps the live subroutes as secondary tools under v7's tabs. */
+.projectTools{margin-bottom:16px}
+.projectTools .tabs{margin-top:5px}
+
 /* A Link rendered as a button should not keep its underline. */
 a.btn,a.btn:hover,a.fchip{text-decoration:none}
 .cmark{overflow:hidden}

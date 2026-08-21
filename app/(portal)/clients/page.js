@@ -4,6 +4,7 @@ import { can } from '../../../lib/perm';
 import { pageAllowed } from '../../../lib/guard';
 import NotYours from '../../../components/NotYours';
 import { ClientsBrowse } from '../../../components/Browse';
+import { evaluate } from '../../../lib/onboard';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,9 +28,12 @@ export default async function Clients() {
   try {
     const raw = await sanity(true).fetch(
       `*[_type=="client" && active != false]|order(name asc){
-        slug, name, code, note, driveFolderId, logoUrl, contacts,
+        slug, name, code, note, driveFolderId, logoUrl, contacts, onbManual,
+        channel, turnaround, renewal, clientType, industry, businessType,
         "projects": *[_type=="project" && references(^._id)]{
-          slug, name, type, "owner": owner->name, "cals": count(calendarSources[current==true])},
+          slug, name, type, voice, prd, contract, deliverables,
+          "owner": owner->name, "cals": count(calendarSources[current==true])},
+        "briefs": count(*[_type=="work" && project->client->slug == ^.slug && defined(brief) && brief != ""]),
         "late": count(*[_type=="work" && project->client->slug == ^.slug
               && !(state in ["approved","done"]) && defined(due) && due < $today]),
         "escalations": count(*[_type=="escalation" && project->client->slug == ^.slug && !defined(resolvedAt)])
@@ -40,7 +44,16 @@ export default async function Clients() {
       const tally = {};
       for (const p of c.projects) if (p.owner) tally[p.owner] = (tally[p.owner] || 0) + 1;
       const lead = Object.keys(tally).sort((a, b) => tally[b] - tally[a])[0] || null;
-      const out = { ...c, lead, contactCount: (c.contacts || []).length, approvers: (c.contacts || []).filter((x) => x.canApprove).length };
+      const setup = evaluate(c);
+      const out = {
+        ...c,
+        lead,
+        typeLabel: c.clientType || c.industry || c.businessType || 'Not set',
+        brain: setup.done[2] ? 'Written' : 'Missing',
+        setup: setup.count,
+        contactCount: (c.contacts || []).length,
+        approvers: (c.contacts || []).filter((x) => x.canApprove).length,
+      };
       return { ...out, health: healthOf(out) };
     });
 
