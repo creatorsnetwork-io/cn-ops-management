@@ -28,6 +28,9 @@ export default async function PortalLayout({ children }) {
     g: g.g,
     items: g.items.map((i) => ({ ...i, count: counts[i.href] || 0, hot: !!counts[i.href + '!'] })),
   }));
+  const system = groups.find((g) => g.g === 'System');
+  if (system) system.items.push({ href: '/mobile', l: 'Mobile screens', count: 0, hot: false });
+  else groups.push({ g: 'System', items: [{ href: '/mobile', l: 'Mobile screens', count: 0, hot: false }] });
 
   return (
     <Shell

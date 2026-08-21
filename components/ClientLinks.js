@@ -42,92 +42,66 @@ export default function ClientLinks({ rows, shares, canRevoke }) {
     setCopied(t); setTimeout(() => setCopied(''), 1500);
   }
 
+  const all = list.map((r) => ({
+    id: 'client:' + r.clientToken,
+    type: 'client', token: r.clientToken, client: r.client, project: r.projectName,
+    what: 'Week of ' + dayOf(r.week), sent: r.sharedAt, by: r.by,
+    url: '/c/' + r.clientToken, expiry: 'When the week closes', source: r,
+    activity: (r.approved || 0) + (r.changes || 0)
+      ? [r.approved ? r.approved + ' approved' : '', r.changes ? r.changes + ' changes' : ''].filter(Boolean).join(', ')
+      : 'No decision yet',
+  })).concat(sh.map((r) => ({
+    id: 'share:' + r.token,
+    type: 'share', token: r.token, client: r.client, project: r.projectName,
+    what: (r.kind === 'brief' ? 'Job brief: ' : 'Call sheet: ') + r.title,
+    sent: r.at, by: r.by, url: '/s/' + r.token, expiry: 'When the work closes', source: r,
+    activity: (r.responses || []).length ? (r.responses || []).length + ' repl' + ((r.responses || []).length === 1 ? 'y' : 'ies') : 'No reply yet',
+  })));
+
   return (
     <>
     <div className="panel">
-      <header><h2>Client week reviews</h2><span className="pill">{list.length}</span></header>
       <table className="tbl">
         <thead><tr>
-          <th style={{ width: 168 }}>Project</th><th style={{ width: 92 }}>Week</th>
-          <th style={{ width: 140 }}>Shared</th><th style={{ width: 168 }}>What they have done</th>
-          <th>Link</th><th style={{ width: 190 }} />
+          <th>Client</th><th>What</th><th>URL</th><th>Sent</th><th>By</th>
+          <th>Opens</th><th>Last open</th><th>Expiry</th><th>State</th><th />
         </tr></thead>
         <tbody>
-          {list.map((r) => {
-            const k = r.week + r.projectSlug;
-            const answered = (r.approved || 0) + (r.changes || 0);
+          {all.map((r) => {
+            const k = r.type === 'client' ? r.source.week + r.source.projectSlug : r.token;
             return (
-              <tr key={k}>
-                <td>{r.projectName}<div style={{ color: 'var(--faint)', fontSize: 12 }}>{r.client}</div></td>
-                <td className="mono">{dayOf(r.week)}</td>
-                <td>{when(r.sharedAt)}</td>
-                <td>
-                  {r.approved ? <span className="tag ok" style={{ marginRight: 4 }}>{r.approved} approved</span> : null}
-                  {r.changes ? <span className="tag bad" style={{ marginRight: 4 }}>{r.changes} changes</span> : null}
-                  {!answered ? <span className="tag mute">not opened yet</span> : null}
-                </td>
-                <td className="mono" style={{ wordBreak: 'break-all', fontSize: 11.5 }}>/c/{r.clientToken}</td>
+              <tr key={r.id}>
+                <td className="b">{r.client || 'Not recorded'}<div className="sub2">{r.project}</div></td>
+                <td>{r.what}<div className="sub2">{r.activity}</div></td>
+                <td className="mono" style={{ wordBreak: 'break-all', fontSize: 11.5 }}>{r.url}</td>
+                <td className="dim">{when(r.sent) || 'Not recorded'}</td>
+                <td className="dim">{r.by || 'Not recorded'}</td>
+                <td className="dim">Not tracked</td>
+                <td className="dim">Not tracked</td>
+                <td className="dim">{r.expiry}</td>
+                <td><span className="tag ok">Live</span></td>
                 <td>
                   <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                    <button className="btn sm" onClick={() => copy(r.clientToken)}>{copied === r.clientToken ? 'Copied' : 'Copy'}</button>
-                    <a className="btn sm" href={'/c/' + r.clientToken} target="_blank" rel="noreferrer">Open</a>
-                    <Link className="btn sm" href={'/projects/' + r.projectSlug + '/review?week=' + r.week}>The week</Link>
-                    {canRevoke ? <button className="btn sm" disabled={busy === k} onClick={() => revoke(r)}>Revoke</button> : null}
+                    <button className="btn sm" onClick={() => r.type === 'client' ? copy(r.token) : copyShare(r.token)}>{copied === r.token ? 'Copied' : 'Copy'}</button>
+                    <a className="btn sm" href={r.url} target="_blank" rel="noreferrer">Open</a>
+                    {r.type === 'client' ? <Link className="btn sm" href={'/projects/' + r.source.projectSlug + '/review?week=' + r.source.week}>The week</Link> : <Link className="btn sm" href={'/work/' + r.source.workId}>The work</Link>}
+                    {canRevoke ? <button className="btn sm" disabled={busy === k} onClick={() => r.type === 'client' ? revoke(r.source) : revokeShare(r.token)}>Revoke</button> : null}
                   </div>
                   {err[k] ? <div style={{ color: 'var(--bad)', fontSize: 12, marginTop: 4 }}>{err[k]}</div> : null}
                 </td>
               </tr>);
           })}
-          {list.length === 0 ? <tr><td colSpan={6} className="empty">
-            No live links. One is created when a week's ship gate is signed and shared.
+          {all.length === 0 ? <tr><td colSpan={10} className="empty">
+            No live links. Client links come from a shipped week; briefs and call sheets come from work.
           </td></tr> : null}
         </tbody>
       </table>
-      <div style={{ padding: '10px 16px', borderTop: '1px solid var(--line2)', fontSize: 12.5, color: 'var(--faint)' }}>
-        Anyone with a link can see that week and answer on it, with no login. Revoking kills the link
-        immediately. Decisions already made are kept, they are the record.
-      </div>
     </div>
 
-    <div className="panel">
-      <header><h2>Briefs and call sheets</h2><span className="pill">{sh.length}</span></header>
-      <table className="tbl">
-        <thead><tr>
-          <th style={{ width: 130 }}>Kind</th><th>What</th><th style={{ width: 140 }}>Shared</th>
-          <th style={{ width: 210 }}>What they did</th><th style={{ width: 180 }} />
-        </tr></thead>
-        <tbody>
-          {sh.map((r) => (
-            <tr key={r.token}>
-              <td><span className={'tag ' + (r.kind === 'brief' ? 'info' : 'tl')}>{r.kind === 'brief' ? 'job brief' : 'call sheet'}</span></td>
-              <td><Link href={'/work/' + r.workId}>{r.title}</Link>
-                <div style={{ color: 'var(--faint)', fontSize: 12 }}>{r.client}, {r.projectName}</div></td>
-              <td>{when(r.at)}<div style={{ color: 'var(--faint)', fontSize: 12 }}>by {r.by}</div></td>
-              <td>{(r.responses || []).length
-                ? (r.responses || []).map((x, i) => (
-                    <div key={i} style={{ fontSize: 12.5 }}>
-                      <span className={'tag ' + (x.kind === 'accepted' ? 'ok' : x.kind === 'declined' ? 'bad' : 'warn')}>{x.kind}</span> {x.by}
-                    </div>))
-                : <span className="tag mute">not opened yet</span>}</td>
-              <td>
-                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                  <button className="btn sm" onClick={() => copyShare(r.token)}>{copied === r.token ? 'Copied' : 'Copy'}</button>
-                  <a className="btn sm" href={'/s/' + r.token} target="_blank" rel="noreferrer">Open</a>
-                  {canRevoke ? <button className="btn sm" disabled={busy === r.token} onClick={() => revokeShare(r.token)}>Revoke</button> : null}
-                </div>
-                {err[r.token] ? <div style={{ color: 'var(--bad)', fontSize: 12, marginTop: 4 }}>{err[r.token]}</div> : null}
-              </td>
-            </tr>))}
-          {sh.length === 0 ? <tr><td colSpan={5} className="empty">
-            No briefs or call sheets are out. Both are made from a work item's own page.
-          </td></tr> : null}
-        </tbody>
-      </table>
-      <div style={{ padding: '10px 16px', borderTop: '1px solid var(--line2)', fontSize: 12.5, color: 'var(--faint)' }}>
-        Freelancers get no login by design. A brief link shows the job and nothing else about the portal,
-        and anything they reply lands on the job rather than in somebody's messages.
-      </div>
+    <div className="callout">
+      <span><b>Open telemetry is not stored yet.</b> Decisions and replies are real activity, but neither proves when a link was opened. The register labels those fields as not tracked instead of guessing.</span>
     </div>
+    <p className="note">Links carry no commercial data. Revoking a link removes public access immediately while keeping decisions and replies in the operational record.</p>
     </>
   );
 }

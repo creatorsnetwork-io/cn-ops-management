@@ -10,6 +10,12 @@ import { allowedDomain } from '../../../lib/oauth';
 export const dynamic = 'force-dynamic';
 
 const softYes = (v) => ['yes', 'exception', 'oversight'].includes(v);
+const iso = (d) => d.toISOString().slice(0, 10);
+function monday(d = new Date()) {
+  const x = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  x.setUTCDate(x.getUTCDate() - ((x.getUTCDay() + 6) % 7));
+  return x;
+}
 
 export default async function Page() {
   const who = meSlug();
@@ -22,7 +28,13 @@ export default async function Page() {
         "reportsToName": reportsTo->name,
         "projects": *[_type=="project" && owner._ref == ^._id]{slug,name}}`);
     const work = await sanity(true).fetch(
-      `*[_type=="work" && !(state in ["approved","done"])]{state,due,needsCraft,"assignee":assignee->slug}`);
+      `*[_type=="work" && !(state in ["approved","done"])]{
+        _id,title,state,due,needsCraft,"assignee":assignee->slug,"projectName":project->name}`);
+
+    const start = monday();
+    const next = new Date(start); next.setUTCDate(next.getUTCDate() + 7);
+    const after = new Date(next); after.setUTCDate(after.getUTCDate() + 7);
+    const startKey = iso(start), nextKey = iso(next), afterKey = iso(after);
 
     rows = people.map((p) => {
       const mine = work.filter((w) => w.assignee === p.slug);
@@ -32,17 +44,33 @@ export default async function Page() {
         if (w.state === 'client') return softYes(can(p.slug, 'triageFeedback'));
         return false;
       }).length;
-      return { ...p, open: mine.length, late: mine.filter((w) => isLate(w)).length, queue };
+      const thisWeek = mine.filter((w) => w.due && w.due >= startKey && w.due < nextKey);
+      const nextWeek = mine.filter((w) => w.due && w.due >= nextKey && w.due < afterKey);
+      return {
+        ...p, open: mine.length, late: mine.filter((w) => isLate(w)).length, queue,
+        comfortable: 3, thisWeek: thisWeek.length, nextWeek: nextWeek.length,
+        thisWeekTitles: thisWeek.map((w) => w.title),
+      };
     });
   } catch (e) { error = e.message; }
 
+  const start = monday();
+  const end = new Date(start); end.setUTCDate(end.getUTCDate() + 6);
+  const weekLabel = start.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+    + ' to ' + end.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+
   return (
     <>
-      <div className="eyebrow">System</div>
-      <h1>Team and capacity</h1>
-      <p className="lede">Who reports to whom, and what each person is actually carrying right now.</p>
+      <div className="head">
+        <div>
+          <div className="eyebrow">Capacity</div>
+          <h1>Team and capacity</h1>
+          <p className="lede">Bandwidth is a screen, not a feeling. Comfortable is the same three-job operating threshold already used by Home.</p>
+        </div>
+        <button className="btn" disabled>{weekLabel}</button>
+      </div>
       {error ? <div className="alert">Sanity did not answer. <code>{error}</code></div> : null}
-      <Team rows={rows} canEdit={['himanshu', 'aashif'].includes(who)} domain={allowedDomain()} />
+      <Team rows={rows} canEdit={['himanshu', 'aashif'].includes(who)} domain={allowedDomain()} weekLabel={weekLabel} />
     </>
   );
 }

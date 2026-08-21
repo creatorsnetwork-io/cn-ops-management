@@ -15,10 +15,15 @@ export default async function Links() {
   try {
     const raw = await sanity(true).fetch(
       `*[_type=="weekReview" && defined(clientToken)]|order(week desc)[0...80]{
-        week, projectSlug, clientToken, sharedAt, clientDecisions,
+        _id, week, projectSlug, clientToken, sharedAt, clientDecisions,
         "projectName": project->name, "client": project->client->name }`);
+    const activity = await sanity(true).fetch(
+      `*[_type=="activity" && what in ["Created the client link","Reopened the client link"]]|order(at desc){target,who,at}`);
+    const sender = {};
+    for (const a of activity) if (!sender[a.target]) sender[a.target] = a;
     rows = raw.map((r) => ({
       ...r,
+      by: sender[r._id]?.who || '',
       approved: (r.clientDecisions || []).filter((d) => d.decision === 'approved').length,
       changes: (r.clientDecisions || []).filter((d) => d.decision === 'changes').length,
       clientDecisions: undefined,
@@ -35,12 +40,16 @@ export default async function Links() {
 
   return (
     <>
-      <div className="eyebrow">Records</div>
-      <h1>Links out</h1>
-      <p className="lede">
-        Every link currently reachable by someone without a login: clients reviewing a week,
-        freelancers holding a brief, crew holding a call sheet.
-      </p>
+      <div className="head">
+        <div>
+          <div className="eyebrow">Tokenised, no login</div>
+          <h1>Client links</h1>
+          <p className="lede">
+            Every live client review, freelancer brief and crew call sheet, with the actions that created it.
+          </p>
+        </div>
+        <a className="btn dark" href="/work">New link</a>
+      </div>
       {error ? <div className="alert">Sanity did not answer. <code>{error}</code></div> : null}
       <ClientLinks rows={rows} shares={shares} canRevoke={can(who, 'shareClientLink') === 'yes'} />
     </>
