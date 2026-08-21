@@ -7,15 +7,15 @@ export default function Who({ how, name, role }) {
 
   if (how === 'testing') {
     return (
-      <div className="who">
-        <span className="whoIdentity"><b>{name}</b>{role ? <small>{role}</small> : null}</span>
-        <a className="btn sm signinProper" href="/signin">Sign in properly</a>
-      </div>);
+      <>
+        <span className="crumb"><b>{name}</b>{role ? <> / {role}</> : null}</span>
+        <a className="btn sm" href="/signin">Sign in properly</a>
+      </>);
   }
 
   return (
-    <div className="who">
-      <span className="whoIdentity"><b>{name}</b>{role ? <small>{role}</small> : null}</span>
+    <>
+      <span className="crumb"><b>{name}</b>{role ? <> / {role}</> : null}</span>
       <button className="btn sm" onClick={out}>Sign out</button>
-    </div>);
+    </>);
 }

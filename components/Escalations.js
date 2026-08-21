@@ -57,16 +57,16 @@ function Row({ e, people, who, canResolve, onDone }) {
   return (
     <>
       <tr>
-        <td className="mono" style={{ whiteSpace: 'nowrap' }}>{when(e.at)}
+        <td className="dim" style={{ whiteSpace: 'nowrap' }}>{when(e.at)}
           {e.kind === 'manual' ? <div><span className="tag info">asked for</span></div> : null}
           {passed ? <div><span className="tag warn">passed up {passed}x</span></div> : null}</td>
         <td>{e.who}</td>
         <td><b>{e.reason}</b>{e.detail ? <div style={{ color: 'var(--muted)', fontSize: 12.5, marginTop: 3 }}>{e.detail}</div> : null}</td>
-        <td>{e.projectName || '—'}{e.week ? <div style={{ color: 'var(--faint)', fontSize: 12 }}>week of {e.week}</div> : null}</td>
+        <td>{e.projectName || 'Not set'}{e.week ? <div style={{ color: 'var(--faint)', fontSize: 12 }}>week of {e.week}</div> : null}</td>
         <td>
           {e.resolvedAt ? (e.ownerName || <span className="tag mute">nobody</span>)
             : canResolve ? (
-              <select className="inp" style={{ padding: '4px 6px', fontSize: 12.5 }} value={e.owner || ''} disabled={busy}
+              <select className="f" style={{ padding: '4px 6px', fontSize: 12.5 }} value={e.owner || ''} disabled={busy}
                 onChange={(ev) => (ev.target.value ? own('give', ev.target.value) : own('unassign'))}>
                 <option value="">Nobody yet</option>
                 {people.map((p) => <option key={p.slug} value={p.slug}>{p.name}</option>)}
@@ -75,7 +75,7 @@ function Row({ e, people, who, canResolve, onDone }) {
             : e.ownerName ? e.ownerName
             : <button className="btn sm" disabled={busy} onClick={() => own('take')}>I will take it</button>}
           {!e.resolvedAt && canResolve && e.owner !== who
-            ? <div style={{ marginTop: 4 }}><button className="btn link" style={{ fontSize: 12 }} disabled={busy} onClick={() => own('take')}>I will take it</button></div>
+            ? <div style={{ marginTop: 4 }}><button className="btn sm" style={{ fontSize: 12 }} disabled={busy} onClick={() => own('take')}>I will take it</button></div>
             : null}
         </td>
         <td>
@@ -96,23 +96,23 @@ function Row({ e, people, who, canResolve, onDone }) {
         <tr><td colSpan={7} style={{ background: '#FCFDFE' }}>
           {open === 'close' ? (
             <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-              <select className="inp" style={{ width: 'auto' }} value={outcome} onChange={(ev) => setOutcome(ev.target.value)}>
+              <select className="f" style={{ width: 'auto' }} value={outcome} onChange={(ev) => setOutcome(ev.target.value)}>
                 <option value="fixed">Fixed it</option>
                 <option value="accepted">Accepted as is</option>
                 <option value="wont-fix">Leaving it</option>
               </select>
-              <input className="inp" style={{ flex: 1, minWidth: 260 }} placeholder="What happened, in one line" value={text} onChange={(ev) => setText(ev.target.value)} />
+              <input type="text" style={{ flex: 1, minWidth: 260 }} placeholder="What happened, in one line" value={text} onChange={(ev) => setText(ev.target.value)} />
               <button className="btn sm dark" disabled={busy} onClick={resolve}>{busy ? 'Saving' : 'Close'}</button>
             </div>
           ) : (
             <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-              <input className="inp" style={{ flex: 1, minWidth: 300 }} placeholder="Why you cannot decide this" value={text} onChange={(ev) => setText(ev.target.value)} />
+              <input type="text" style={{ flex: 1, minWidth: 300 }} placeholder="Why you cannot decide this" value={text} onChange={(ev) => setText(ev.target.value)} />
               <button className="btn sm dark" disabled={busy} onClick={passUp}>{busy ? 'Sending' : 'Pass it up'}</button>
             </div>
           )}
           {hops.length ? (
             <div style={{ marginTop: 12, fontSize: 12.5 }}>
-              <div className="k" style={{ marginBottom: 5 }}>How it got here</div>
+              <div className="fl">How it got here</div>
               {hops.map((h, n) => (
                 <div key={h._key || n} style={{ color: 'var(--muted)' }}>
                   {h.from || 'raised'} to <b>{h.to}</b> · {when(h.at)}{h.note ? ' · ' + h.note : ''}
@@ -138,17 +138,17 @@ export default function Escalations({ items, people, who, canResolve }) {
 
   return (
     <>
-      <div className="tabs">
-        <button className={tab === 'open' ? 'on' : ''} onClick={() => setTab('open')}>Open ({open.length})</button>
-        <button className={tab === 'mine' ? 'on' : ''} onClick={() => setTab('mine')}>Mine ({mine.length})</button>
-        <button className={tab === 'closed' ? 'on' : ''} onClick={() => setTab('closed')}>Closed ({closed.length})</button>
+      <div className="tabsrow">
+        <button className={'tb ' + (tab === 'open' ? 'on' : '')} onClick={() => setTab('open')}>Open ({open.length})</button>
+        <button className={'tb ' + (tab === 'mine' ? 'on' : '')} onClick={() => setTab('mine')}>Mine ({mine.length})</button>
+        <button className={'tb ' + (tab === 'closed' ? 'on' : '')} onClick={() => setTab('closed')}>Closed ({closed.length})</button>
       </div>
-      <div className="panel" style={{ marginTop: 0, borderTopLeftRadius: 0, borderTopRightRadius: 0 }}>
-        <table className="tbl">
+      <div className="panel">
+        <table>
           <thead><tr><th style={{ width: 128 }}>When</th><th style={{ width: 92 }}>Who</th><th>Why</th><th style={{ width: 150 }}>Where</th><th style={{ width: 130 }}>Who owns it</th><th style={{ width: 175 }}>State</th><th style={{ width: 150 }} /></tr></thead>
           <tbody>
             {shown.map((e) => <Row key={e._id} e={e} people={people} who={who} canResolve={canResolve} onDone={onDone} />)}
-            {shown.length === 0 ? <tr><td colSpan={7} className="empty">
+            {shown.length === 0 ? <tr><td colSpan={7} className="dim">
               {tab === 'open' ? 'Nothing open. Nobody has needed you this week.'
                 : tab === 'mine' ? 'Nothing sitting with you.' : 'Nothing closed yet.'}
             </td></tr> : null}

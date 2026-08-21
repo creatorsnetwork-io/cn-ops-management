@@ -1,4 +1,5 @@
 'use client';
+import { Fragment } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -62,12 +63,12 @@ export default function Breadcrumbs({ index }) {
   const crumbs = crumbsFor(pathname, index || []);
 
   return (
-    <nav className="breadcrumbs" aria-label="Breadcrumb">
+    <nav aria-label="Breadcrumb">
       {crumbs.map((c, i) => (
-        <span className="breadcrumbPart" key={i}>
-          {i ? <span className="breadcrumbSep" aria-hidden="true">/</span> : null}
+        <Fragment key={i}>
+          {i ? <span aria-hidden="true"> / </span> : null}
           {c.href ? <Link href={c.href}>{c.label}</Link> : <b aria-current={i === crumbs.length - 1 ? 'page' : undefined}>{c.label}</b>}
-        </span>
+        </Fragment>
       ))}
     </nav>
   );

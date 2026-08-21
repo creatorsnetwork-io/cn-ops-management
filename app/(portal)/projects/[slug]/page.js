@@ -90,7 +90,7 @@ export default async function Project({ params }) {
     }
   } catch (e) { error = e.message; }
 
-  if (error) return <><h1>Project</h1><div className="alert">Sanity did not answer. <code>{error}</code></div></>;
+  if (error) return <><h1>Project</h1><div className="alertbar">Sanity did not answer. <code>{error}</code></div></>;
   if (!p) return <><h1>Not found</h1><p className="lede">No project with the name <code>{params.slug}</code>. <Link href="/projects">Back to projects</Link></p></>;
 
   p.target = (p.deliverables || []).reduce((a, d) => a + (+d.target || 0), 0);

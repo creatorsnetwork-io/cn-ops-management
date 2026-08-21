@@ -76,7 +76,7 @@ export default async function Jobs() {
           <a className="btn dark" href="/jobs">Refresh</a>
         </div>
       </div>
-      {error ? <div className="alert">Sanity did not answer. <code>{error}</code></div> : null}
+      {error ? <div className="alertbar">Sanity did not answer. <code>{error}</code></div> : null}
 
       <div className="alertbar">
         <span><b>No daily heartbeat is being written yet.</b> Manual reads can run now, while the digest and same-day nudge remain waiting for hosted scheduling.</span>
@@ -87,24 +87,24 @@ export default async function Jobs() {
 
       <div className="panel">
         <header><h2>Digest history</h2><span className="hint">the push channel once scheduling is connected</span></header>
-        {digests.map((d) => <div key={d._id} className="digestRow"><div className="lbl">{when(d.at)}</div><div>{d.detail || d.what}</div></div>)}
-        {digests.length === 0 ? <div className="empty">No digest run has been recorded.</div> : null}
+        {digests.map((d) => <div key={d._id} style={{ padding: '13px 15px', borderBottom: '1px solid var(--line2)', fontSize: 13 }}><div className="lbl">{when(d.at)}</div><div style={{ marginTop: 4 }}>{d.detail || d.what}</div></div>)}
+        {digests.length === 0 ? <div className="pad note">No digest run has been recorded.</div> : null}
       </div>
 
       <div className="panel">
         <header><h2>Everything anyone did</h2><span className="pill">last {activity.length}</span></header>
-        <table className="tbl">
+        <table>
           <thead><tr><th style={{ width: 140 }}>When</th><th style={{ width: 118 }}>Who</th><th style={{ width: 230 }}>What</th><th>Detail</th></tr></thead>
           <tbody>
             {activity.map((a) => (
               <tr key={a._id}>
-                <td className="mono">{when(a.at)}</td>
+                <td className="dim">{when(a.at)}</td>
                 <td>{a.who}</td>
                 <td>{a.what}</td>
                 <td style={{ color: 'var(--muted)' }}>{a.detail || 'No detail'}
-                  {a.target ? <div className="mono" style={{ color: 'var(--faint)', fontSize: 11.5 }}>{a.target}</div> : null}</td>
+                  {a.target ? <div className="dim" style={{ color: 'var(--faint)', fontSize: 11.5 }}>{a.target}</div> : null}</td>
               </tr>))}
-            {activity.length === 0 ? <tr><td colSpan={4} className="empty">Nothing logged yet.</td></tr> : null}
+            {activity.length === 0 ? <tr><td colSpan={4} className="dim">Nothing logged yet.</td></tr> : null}
           </tbody>
         </table>
         <div style={{ padding: '10px 16px', borderTop: '1px solid var(--line2)', fontSize: 12.5, color: 'var(--faint)' }}>

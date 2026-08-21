@@ -30,9 +30,9 @@ function Decision({ it, token, onDone }) {
     if (j.ok) { onDone(it.key, j); setMode(false); setComment(''); } else setErr(j.error || 'That did not go through.');
   }
 
-  if (it.decision && !mode) return <div className="clientDecision"><span className={'tag ' + (it.decision.decision === 'approved' ? 'ok' : 'bad')}>{it.decision.decision === 'approved' ? 'Approved' : 'Changes requested'}</span><span>{it.decision.by ? 'by ' + it.decision.by : ''}</span>{it.decision.comment ? <span>{it.decision.comment}</span> : null}<button className="btn sm" onClick={() => setMode(true)}>Change answer</button></div>;
+  if (it.decision && !mode) return <div className="rowb"><span className={'tag ' + (it.decision.decision === 'approved' ? 'ok' : 'bad')}>{it.decision.decision === 'approved' ? 'Approved' : 'Changes requested'}</span><span>{it.decision.by ? 'by ' + it.decision.by : ''}</span>{it.decision.comment ? <span>{it.decision.comment}</span> : null}<button className="btn sm" onClick={() => setMode(true)}>Change answer</button></div>;
   if (!mode) return <div className="rowb"><button className="btn dark" onClick={() => setMode(true)}>Approve post</button><button className="btn" onClick={() => setMode(true)}>Request a change</button></div>;
-  return <div className="decisionForm"><input className="inp" placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} /><textarea className="inp" placeholder="What would you like changed? Leave blank if approving." value={comment} onChange={(e) => setComment(e.target.value)} />{err ? <div className="formError" style={{ padding: 0 }}>{err}</div> : null}<div className="rowb"><button className="btn dark" disabled={busy} onClick={() => send('approved')}>Approve post</button><button className="btn" disabled={busy} onClick={() => send('changes')}>Request changes</button><button className="btn" onClick={() => setMode(false)}>Cancel</button></div></div>;
+  return <div style={{ display: 'grid', gap: 8, width: '100%' }}><input type="text" placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} /><textarea placeholder="What would you like changed? Leave blank if approving." value={comment} onChange={(e) => setComment(e.target.value)} />{err ? <div className="note" style={{ color: 'var(--bad)' }}>{err}</div> : null}<div className="rowb"><button className="btn dark" disabled={busy} onClick={() => send('approved')}>Approve post</button><button className="btn" disabled={busy} onClick={() => send('changes')}>Request changes</button><button className="btn" onClick={() => setMode(false)}>Cancel</button></div></div>;
 }
 
 export default function ClientReviewV7({ token }) {
@@ -57,7 +57,7 @@ export default function ClientReviewV7({ token }) {
   const done = d ? d.items.filter((x) => x.decision).length : 0;
 
   return (
-    <div className="pshell clientPortal">
+    <div className="pshell">
       <aside className="pside">
         <div className="brand"><img src="/cn-logo.png" alt="Creators Network" /></div>
         <div className="grp"><div className="lbl">Shared with you</div><button className={'nav ' + (!item ? 'on' : '')} onClick={() => setSelected('')}>Shared calendar</button>{item ? <button className="nav on">{(item.title || item.type || 'Post').slice(0, 24)}</button> : null}</div>
@@ -65,12 +65,12 @@ export default function ClientReviewV7({ token }) {
       </aside>
       <div>
         <div className="top">
-          <div className="crumb">{item ? <><button className="crumbButton" onClick={() => setSelected('')}>Shared calendar</button> / <b>{item.title || item.type}</b></> : <>{d?.client || 'Client'} / <b>Shared calendar</b></>}</div>
-          {d ? <div className="cobrand"><span className="clientMark">{mark(d.client)}</span><div className="div" /><img src="/cn-logo.png" alt="Creators Network" /></div> : null}
+          <div className="crumb">{item ? <><button onClick={() => setSelected('')}>Shared calendar</button> / <b>{item.title || item.type}</b></> : <>{d?.client || 'Client'} / <b>Shared calendar</b></>}</div>
+          {d ? <div className="cobrand"><span className="cmark" style={{ width: 28, height: 28, fontSize: 9 }}>{mark(d.client)}</span><div className="div" /><img src="/cn-logo.png" style={{ height: 30 }} alt="Creators Network" /></div> : null}
         </div>
-        <main className="portalMain">
-          {err ? <div className="alert">{err}</div> : null}
-          {!d && !err ? <div className="empty">Loading this calendar.</div> : null}
+        <main className="main">
+          {err ? <div className="alertbar">{err}</div> : null}
+          {!d && !err ? <div className="panel"><div className="pad note">Loading this calendar.</div></div> : null}
           {d && !item ? <>
             <div className="head"><div><div className="eyebrow">{d.client}</div><h1>{d.project}</h1><p className="lede">Content for {pretty(d.week)}. Open any item to read each channel exactly as it will publish.</p></div></div>
             <div className="guard">Files open from the shared Drive location. {done} of {d.items.length} post{d.items.length === 1 ? '' : 's'} answered.</div>
@@ -89,10 +89,10 @@ export default function ClientReviewV7({ token }) {
               <div className="panel">
                 <div className="chtabs" style={{ padding: '0 15px' }}>{item.captions.map((c) => <button className={'cht ' + (c.channel === (caption?.channel || channel) ? 'on' : '')} key={c.channel} onClick={() => setChannel(c.channel)}>{c.channel}</button>)}{!item.captions.length ? <span className="cht on">Content</span> : null}</div>
                 <div className="pad art"><div className="cap">{caption?.text || item.creativeText || 'No copy is attached to this item.'}</div></div>
-                <div className="portalDecision"><Decision it={item} token={token} onDone={onDone} /><span className="note">The live approval applies to the post as a whole, not a separate channel record.</span></div>
+                <div style={{ padding: '13px 15px', borderTop: '1px solid var(--line2)', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', background: 'var(--head)' }}><Decision it={item} token={token} onDone={onDone} /><span className="note">The live approval applies to the post as a whole, not a separate channel record.</span></div>
               </div>
               <div className="panel"><header><h2>The creative</h2><span className="hint">shared from Drive</span></header><div className="pad">
-                {emb && show ? <iframe className="cprev" src={emb} allow="autoplay" title="Creative preview" /> : <div className="prev"><span>{item.type || 'Creative'} preview</span></div>}
+                {emb && show ? <iframe className="prev" src={emb} allow="autoplay" title="Creative preview" /> : <div className="prev"><span>{item.type || 'Creative'} preview</span></div>}
                 <div className="rowb" style={{ marginTop: 12 }}>{emb ? <button className="btn" onClick={() => setShow(!show)}>{show ? 'Hide preview' : 'Preview here'}</button> : null}{item.creativeLink ? <a className="btn" href={item.creativeLink} target="_blank" rel="noreferrer">Open in Drive</a> : <span className="note">The file is still coming.</span>}</div>
               </div></div>
             </div>

@@ -26,16 +26,16 @@ function Limits({ initial, fallback, canEdit, onSave }) {
           <button className="btn sm dark" disabled={busy} onClick={save}>Save</button>
         </span> : <span className="pill">view only</span>}
       </header>
-      <table className="tbl">
+      <table>
         <thead><tr><th>Channel</th><th style={{ width: 140 }}>Characters</th><th style={{ width: 120 }}>Hashtags, least</th><th style={{ width: 120 }}>Hashtags, most</th>{canEdit ? <th style={{ width: 60 }} /> : null}</tr></thead>
         <tbody>
           {rows.map((r, i) => (
             <tr key={i}>
-              <td><input className="inp" value={r.channel} disabled={!canEdit} onChange={(e) => set(i, 'channel', e.target.value)} /></td>
-              <td><input className="inp" value={r.chars} disabled={!canEdit} onChange={(e) => set(i, 'chars', e.target.value)} /></td>
-              <td><input className="inp" value={r.tagsMin} disabled={!canEdit} onChange={(e) => set(i, 'tagsMin', e.target.value)} /></td>
-              <td><input className="inp" value={r.tagsMax} disabled={!canEdit} onChange={(e) => set(i, 'tagsMax', e.target.value)} /></td>
-              {canEdit ? <td><button className="btn link" onClick={() => setRows(rows.filter((_, j) => j !== i))}>Drop</button></td> : null}
+              <td><input type="text" value={r.channel} disabled={!canEdit} onChange={(e) => set(i, 'channel', e.target.value)} /></td>
+              <td><input type="text" value={r.chars} disabled={!canEdit} onChange={(e) => set(i, 'chars', e.target.value)} /></td>
+              <td><input type="text" value={r.tagsMin} disabled={!canEdit} onChange={(e) => set(i, 'tagsMin', e.target.value)} /></td>
+              <td><input type="text" value={r.tagsMax} disabled={!canEdit} onChange={(e) => set(i, 'tagsMax', e.target.value)} /></td>
+              {canEdit ? <td><button className="btn sm" onClick={() => setRows(rows.filter((_, j) => j !== i))}>Drop</button></td> : null}
             </tr>))}
         </tbody>
       </table>
@@ -67,7 +67,7 @@ function Voice({ p, canEdit, onSave }) {
         {canEdit ? <button className="btn sm dark" disabled={busy} onClick={save}>{busy ? 'Saving' : 'Save'}</button> : <span className="pill">view only</span>}
       </header>
       <div style={{ padding: '14px 16px' }}>
-        <textarea className="inp" style={{ minHeight: 140 }} value={text} disabled={!canEdit}
+        <textarea style={{ minHeight: 140 }} value={text} disabled={!canEdit}
           placeholder="Write it the way you would brief a new writer. What the brand is, how it talks, what it never does."
           onChange={(e) => setText(e.target.value)} />
         <p className="note" style={{ marginTop: 8 }}>
@@ -100,7 +100,7 @@ function WordList({ title, note, words, onSave, canEdit }) {
         {canEdit ? <button className="btn sm dark" disabled={busy} onClick={save}>{busy ? 'Saving' : 'Save'}</button> : <span className="pill">view only</span>}
       </header>
       <div style={{ padding: '14px 16px' }}>
-        <textarea className="inp" style={{ minHeight: 130, fontFamily: 'ui-monospace,Menlo,monospace', fontSize: 12.5 }}
+        <textarea style={{ minHeight: 130, fontFamily: 'ui-monospace,Menlo,monospace', fontSize: 12.5 }}
           value={text} disabled={!canEdit} onChange={(e) => setText(e.target.value)} />
         <p className="note" style={{ marginTop: 8 }}>{note}</p>
         {msg ? <div style={{ marginTop: 8, fontSize: 13, color: msg === 'Saved.' ? 'var(--ok)' : 'var(--bad)' }}>{msg}</div> : null}
@@ -127,7 +127,7 @@ export default function Settings({ house, projects, canEdit, limits, builtIn }) 
       <div className="grid2">
         <div className="panel">
           <header><h2>Rules</h2></header>
-          <table className="tbl"><tbody>
+          <table><tbody>
             <tr><td className="b" style={{ width: 225 }}>Lead time on unplanned requests</td><td>Due date set per request<div className="note">Fault handling remains in the live request flow</div></td></tr>
             <tr><td className="b">Revision rounds included</td><td>Not stored globally<div className="note">Work and feedback keep their live round accounting</div></td></tr>
             <tr><td className="b">Daily digest</td><td>{String(hour).padStart(2, '0')}:00 GST<div className="note">Scheduled delivery starts after hosting</div></td></tr>
@@ -139,7 +139,7 @@ export default function Settings({ house, projects, canEdit, limits, builtIn }) 
         <div>
           <div className="panel">
             <header><h2>Integrations</h2><Link className="btn sm" href="/setup">Run live checks</Link></header>
-            <table className="tbl"><tbody>
+            <table><tbody>
               {[
                 ['Google Sheets', 'Read calendars; writes use empty cells only'],
                 ['Google Drive', 'Folders, files and external previews'],
@@ -157,7 +157,7 @@ export default function Settings({ house, projects, canEdit, limits, builtIn }) 
         </div>
       </div>
 
-      <div className="sectionLabel">Quality and voice controls</div>
+      <div className="lbl" style={{ margin: '22px 0 8px' }}>Quality and voice controls</div>
       <div className="panel">
         <header><h2>Phrases built into the checks</h2><span className="pill">{(builtIn || []).length}, not editable</span></header>
         <div style={{ padding: '13px 16px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -199,8 +199,8 @@ export default function Settings({ house, projects, canEdit, limits, builtIn }) 
         <header><h2>The daily digest</h2>
           {canEdit ? <button className="btn sm dark" disabled={busy} onClick={saveHour}>{busy ? 'Saving' : 'Save'}</button> : null}</header>
         <div style={{ padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <label><div className="k">Sent at, Dubai time</div>
-            <select className="inp" style={{ width: 'auto' }} value={hour} disabled={!canEdit} onChange={(e) => setHour(+e.target.value)}>
+          <label><div className="fl">Sent at, Dubai time</div>
+            <select className="f" style={{ width: 'auto' }} value={hour} disabled={!canEdit} onChange={(e) => setHour(+e.target.value)}>
               {Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>)}
             </select></label>
           {msg ? <span style={{ fontSize: 13, color: msg === 'Saved.' ? 'var(--ok)' : 'var(--bad)' }}>{msg}</span> : null}

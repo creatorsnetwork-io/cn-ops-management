@@ -24,7 +24,7 @@ function Email({ slug, initial, canEdit, domain }) {
 
   return (
     <>
-      <input className="inp" style={{ fontSize: 12.5, borderColor: wrong ? 'var(--bad)' : undefined }}
+      <input type="text" style={{ fontSize: 12.5, borderColor: wrong ? 'var(--bad)' : undefined }}
         value={v} placeholder={'name@' + domain} onChange={(e) => setV(e.target.value)} onBlur={save} />
       {wrong ? <div style={{ fontSize: 11.5, color: 'var(--bad)', marginTop: 3 }}>Sign in only accepts {domain}</div> : null}
       {state === 'saving' ? <div style={{ fontSize: 11.5, color: 'var(--faint)', marginTop: 3 }}>saving</div> : null}
@@ -42,7 +42,7 @@ function Capacity({ rows, weekLabel }) {
     <>
       <div className="panel">
         <header><h2>Load</h2><span className="hint">jobs due this week and next</span></header>
-        <table className="tbl">
+        <table>
           <thead><tr><th>Person</th><th>Role</th><th className="num">Comfortable</th><th className="num">This week</th><th className="num">Next week</th><th>Load</th><th>Note</th></tr></thead>
           <tbody>
             {active.map((p) => {
@@ -59,23 +59,23 @@ function Capacity({ rows, weekLabel }) {
                   <td className="dim">{overLimit ? 'Over capacity for ' + weekLabel : p.open + ' open overall'}</td>
                 </tr>);
             })}
-            {active.length === 0 ? <tr><td colSpan={7} className="empty">No active team members.</td></tr> : null}
+            {active.length === 0 ? <tr><td colSpan={7} className="dim">No active team members.</td></tr> : null}
           </tbody>
         </table>
-        <div className="panelNote">Items without a due date remain in each person's open total, but cannot be assigned to this week or next week.</div>
+        <div className="pad" style={{ borderTop: '1px solid var(--line2)' }}><p className="note">Items without a due date remain in each person's open total, but cannot be assigned to this week or next week.</p></div>
       </div>
 
       <div className="grid2">
         <div className="panel">
           <header><h2>Coverage</h2><span className="hint">who backs whom</span></header>
-          <table className="tbl"><tbody>
+          <table><tbody>
             {active.map((p) => <tr key={p.slug}><td className="b" style={{ width: 150 }}>{p.name}</td><td className="dim">Backup not recorded</td></tr>)}
           </tbody></table>
-          <div className="panelNote">The person API has no backup or succession field. {missingBackups} active role{missingBackups === 1 ? '' : 's'} therefore remain explicitly unrecorded.</div>
+          <div className="pad" style={{ borderTop: '1px solid var(--line2)' }}><p className="note">The person API has no backup or succession field. {missingBackups} active role{missingBackups === 1 ? '' : 's'} therefore remain explicitly unrecorded.</p></div>
         </div>
         <div className="panel">
           <header><h2>Overflow to the founder</h2></header>
-          <table className="tbl"><tbody>
+          <table><tbody>
             <tr><td className="b" style={{ width: 145 }}>This week</td><td className="dim">{over.length ? over.map((p) => p.name + ' at ' + p.thisWeek + ' of ' + p.comfortable).join(', ') : 'No one is over the operating threshold'}</td></tr>
             <tr><td className="b">Cause</td><td className="dim">{over.length ? over.flatMap((p) => p.thisWeekTitles).slice(0, 4).join(', ') || 'Due work' : 'No overflow detected'}</td></tr>
             <tr><td className="b">Structural action</td><td className="dim">Not recorded</td></tr>
@@ -104,16 +104,16 @@ export default function Team({ rows, canEdit, domain, weekLabel }) {
     <>
       <Capacity rows={rows} weekLabel={weekLabel} />
 
-      <div className="sectionLabel">Team administration</div>
+      <div className="lbl" style={{ margin: '22px 0 8px' }}>Team administration</div>
       {canEdit ? (adding ? (
         <div className="panel">
           <header><h2>Add someone</h2><button className="btn sm" onClick={() => setAdding(false)}>Cancel</button></header>
           <div style={{ padding: '14px 16px', display: 'grid', gap: 11, gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))' }}>
-            <label><div className="k">Name</div><input className="inp" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
-            <label><div className="k">What they do</div><input className="inp" value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })} /></label>
-            <label><div className="k">Work email</div><input className="inp" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
-            <label><div className="k">Reports to</div>
-              <select className="inp" value={f.reportsTo} onChange={(e) => setF({ ...f, reportsTo: e.target.value })}>
+            <label><div className="fl">Name</div><input type="text" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
+            <label><div className="fl">What they do</div><input type="text" value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })} /></label>
+            <label><div className="fl">Work email</div><input type="text" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
+            <label><div className="fl">Reports to</div>
+              <select className="f" value={f.reportsTo} onChange={(e) => setF({ ...f, reportsTo: e.target.value })}>
                 <option value="">Nobody</option>
                 {rows.map((p) => <option key={p.slug} value={p.slug}>{p.name}</option>)}
               </select></label>
@@ -127,7 +127,7 @@ export default function Team({ rows, canEdit, domain, weekLabel }) {
 
       <div className="panel">
         <header><h2>People, access and reporting lines</h2><span className="pill">{rows.filter((r) => r.active).length} active</span></header>
-        <table className="tbl">
+        <table>
           <thead><tr>
             <th>Person</th><th style={{ width: 210 }}>Work email</th><th style={{ width: 118 }}>Reports to</th>
             <th style={{ width: 92 }}>Open work</th><th style={{ width: 78 }}>Late</th>

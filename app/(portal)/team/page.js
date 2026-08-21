@@ -69,7 +69,7 @@ export default async function Page() {
         </div>
         <button className="btn" disabled>{weekLabel}</button>
       </div>
-      {error ? <div className="alert">Sanity did not answer. <code>{error}</code></div> : null}
+      {error ? <div className="alertbar">Sanity did not answer. <code>{error}</code></div> : null}
       <Team rows={rows} canEdit={['himanshu', 'aashif'].includes(who)} domain={allowedDomain()} weekLabel={weekLabel} />
     </>
   );

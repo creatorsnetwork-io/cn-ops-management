@@ -20,7 +20,7 @@ export default async function CalendarIndex({ searchParams }) {
 
   return (
     <>
-      {error ? <div className="alert">Sanity did not answer. <code>{error}</code></div> : null}
+      {error ? <div className="alertbar">Sanity did not answer. <code>{error}</code></div> : null}
       <CalendarHub projects={rows} defaultSlug={searchParams && searchParams.project}
         canShare={can(who, 'shareClientLink') === 'yes'} />
     </>

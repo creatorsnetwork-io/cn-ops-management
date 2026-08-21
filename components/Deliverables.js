@@ -52,11 +52,11 @@ export default function Deliverables({ slug, initial, canEdit, work }) {
 
       {t ? (
         <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--line2)' }}>
-          <div className="stat">
-            <div><b>{t.shipped}</b><span>submitted to client</span></div>
-            <div><b style={{ color: 'var(--ok)' }}>{t.approved}</b><span>client approved</span></div>
-            <div><b style={{ color: t.changes ? 'var(--bad)' : undefined }}>{t.changes}</b><span>changes asked</span></div>
-            <div><b style={{ color: t.waiting ? 'var(--warn)' : undefined }}>{t.waiting}</b><span>no answer yet</span></div>
+          <div className="stats">
+            <div><div className="lbl">Submitted to client</div><div className="v">{t.shipped}</div></div>
+            <div><div className="lbl">Client approved</div><div className="v" style={{ color: 'var(--ok)' }}>{t.approved}</div></div>
+            <div><div className="lbl">Changes asked</div><div className="v" style={{ color: t.changes ? 'var(--bad)' : undefined }}>{t.changes}</div></div>
+            <div><div className="lbl">No answer yet</div><div className="v" style={{ color: t.waiting ? 'var(--warn)' : undefined }}>{t.waiting}</div></div>
           </div>
           <p className="note" style={{ marginTop: 9 }}>
             Only client approvals count towards a target. The gap between submitted and answered is
@@ -70,7 +70,7 @@ export default function Deliverables({ slug, initial, canEdit, work }) {
         </div>
       ) : null}
 
-      <table className="tbl">
+      <table>
         <thead><tr>
           <th>What was promised</th><th style={{ width: 96 }}>Committed</th><th style={{ width: 96 }}>Submitted</th>
           <th style={{ width: 96 }}>Approved</th><th style={{ width: 110 }}>Per</th><th>What counts as done</th>
@@ -79,20 +79,20 @@ export default function Deliverables({ slug, initial, canEdit, work }) {
           {rows.map((r, i) => {
             const n = countFor(r);
             return <tr key={r._key || i}>
-              <td><input className="inp" value={r.name} disabled={!canEdit} placeholder="Social posts" onChange={(e) => set(i, 'name', e.target.value)} /></td>
-              <td><input className="inp" value={r.target} disabled={!canEdit} onChange={(e) => set(i, 'target', e.target.value)} /></td>
+              <td><input type="text" value={r.name} disabled={!canEdit} placeholder="Social posts" onChange={(e) => set(i, 'name', e.target.value)} /></td>
+              <td><input type="text" value={r.target} disabled={!canEdit} onChange={(e) => set(i, 'target', e.target.value)} /></td>
               <td><b>{n.submitted}</b>{r.target ? <span style={{ color: 'var(--faint)' }}> of {r.target}</span> : null}</td>
               <td>{n.approved ? <span className="tag ok">{n.approved}</span> : '0'}</td>
               <td>
-                <select className="inp" value={r.period} disabled={!canEdit} onChange={(e) => set(i, 'period', e.target.value)}>
+                <select className="f" value={r.period} disabled={!canEdit} onChange={(e) => set(i, 'period', e.target.value)}>
                   <option value="week">week</option><option value="month">month</option>
                   <option value="year">year</option><option value="total">contract</option>
                 </select>
               </td>
-              <td><input className="inp" value={r.acceptance} disabled={!canEdit} placeholder="Approved by the client in writing" onChange={(e) => set(i, 'acceptance', e.target.value)} /></td>
+              <td><input type="text" value={r.acceptance} disabled={!canEdit} placeholder="Approved by the client in writing" onChange={(e) => set(i, 'acceptance', e.target.value)} /></td>
             </tr>;
           })}
-          {rows.length === 0 ? <tr><td colSpan={6} className="empty">No baseline set. Add what the contract promised.</td></tr> : null}
+          {rows.length === 0 ? <tr><td colSpan={6} className="dim">No baseline set. Add what the contract promised.</td></tr> : null}
         </tbody>
       </table>
       {msg ? <div style={{ padding: '11px 16px', borderTop: '1px solid var(--line2)', fontSize: 13, color: msg === 'Saved.' ? 'var(--ok)' : 'var(--bad)' }}>{msg}</div> : null}
@@ -100,15 +100,15 @@ export default function Deliverables({ slug, initial, canEdit, work }) {
       {roll && roll.rows.length ? (
         <>
           <div style={{ padding: '13px 16px', borderTop: '1px solid var(--line)', fontWeight: 600, fontSize: 13.5 }}>Week by week</div>
-          <table className="tbl">
+          <table>
             <thead><tr><th>Week</th><th>Submitted</th><th>Approved</th><th>Changes</th><th>Craft gate</th><th>Ship gate</th><th /></tr></thead>
             <tbody>
               {roll.rows.slice().reverse().map((w) => (
                 <tr key={w.week}>
-                  <td className="mono">{w.week}</td>
-                  <td>{w.shipped || '—'}</td>
-                  <td>{w.approved ? <span className="tag ok">{w.approved}</span> : '—'}</td>
-                  <td>{w.changes ? <span className="tag bad">{w.changes}</span> : '—'}</td>
+                  <td className="dim">{w.week}</td>
+                  <td>{w.shipped || 'Not set'}</td>
+                  <td>{w.approved ? <span className="tag ok">{w.approved}</span> : 'Not set'}</td>
+                  <td>{w.changes ? <span className="tag bad">{w.changes}</span> : 'Not set'}</td>
                   <td>{w.craftBy || <span className="tag mute">open</span>}</td>
                   <td>{w.shipBy ? <>{w.shipBy}{w.override ? <span className="tag warn" style={{ marginLeft: 5 }}>override</span> : null}</> : <span className="tag mute">open</span>}</td>
                   <td><a className="btn sm" href={'/projects/' + slug + '/review?week=' + w.week}>Open</a></td>

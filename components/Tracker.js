@@ -70,7 +70,7 @@ export default function Tracker({ sources, project, canShare }) {
     return () => { ok = false; };
   }, [src, tab, week, source && source.sheetId, check.tick]);
 
-  if (!source) return <div className="panel"><div className="empty">No calendar linked to this project yet. Add one on the Overview tab.</div></div>;
+  if (!source) return <div className="panel"><div className="pad note">No calendar linked to this project yet. Add one on the Overview tab.</div></div>;
 
   const items = d ? (scope === 'week' ? d.items.filter((i) => i.week === d.week) : scope === 'pending' ? d.items.filter((i) => i.pending || i.partial) : d.items) : [];
   const currentWeek = d ? d.items.filter((i) => i.week === d.week) : [];
@@ -100,32 +100,32 @@ export default function Tracker({ sources, project, canShare }) {
             <div className="sub2">{d ? d.sheetTitle + ', tab ' + d.tab : project.name}</div></div>
           <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {sources.length > 1 ? (
-              <select className="inp" style={{ width: 'auto' }} value={src} onChange={(e) => setSrc(e.target.value)}>
+              <select className="f" style={{ width: 'auto' }} value={src} onChange={(e) => setSrc(e.target.value)}>
                 {sources.map((s) => <option key={s._key} value={s._key}>{s.label}{s.current ? '' : ' (old)'}</option>)}
               </select>) : null}
             {d ? (
-              <select className="inp" style={{ width: 'auto' }} value={tab} onChange={(e) => { setTab(e.target.value); setWeek(''); }}>
+              <select className="f" style={{ width: 'auto' }} value={tab} onChange={(e) => { setTab(e.target.value); setWeek(''); }}>
                 {d.tabs.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>) : null}
             {d && d.weeks.length ? (
-              <select className="inp" style={{ width: 'auto' }} value={week} onChange={(e) => setWeek(e.target.value)}>
+              <select className="f" style={{ width: 'auto' }} value={week} onChange={(e) => setWeek(e.target.value)}>
                 {d.weeks.map((w) => <option key={w.week} value={w.week}>{pretty(w.week, w.week.slice(0, 4) !== String(source.year))} ({w.count})</option>)}
               </select>) : null}
           </span>
         </header>
 
-        {err ? <div className="row"><span className="dot no" /><div className="t"><b>Could not read this sheet</b><span className="err">{err}</span></div></div> : null}
-        {!d && !err ? <div className="empty">Reading the sheet.</div> : null}
-        {d && d.reason ? <div className="row"><span className="dot no" /><div className="t"><b>Could not make sense of the layout</b><span className="err">{d.reason} Pick a different tab above.</span></div></div> : null}
+        {err ? <div className="alertbar"><span><b>Could not read this sheet.</b> {err}</span></div> : null}
+        {!d && !err ? <div className="pad note">Reading the sheet.</div> : null}
+        {d && d.reason ? <div className="alertbar"><span><b>Could not make sense of the layout.</b> {d.reason} Pick a different tab above.</span></div> : null}
 
         {d && !d.reason ? (
           <>
-            <div className="tabs" style={{ margin: 0, padding: '0 10px' }}>
-              <button className={scope === 'week' ? 'on' : ''} onClick={() => setScope('week')}>This week ({d.summary.total})</button>
-              <button className={scope === 'pending' ? 'on' : ''} onClick={() => setScope('pending')}>All pending ({d.items.filter((i) => i.pending || i.partial).length})</button>
-              <button className={scope === 'all' ? 'on' : ''} onClick={() => setScope('all')}>Whole tab ({d.overall.total})</button>
+            <div className="filters" style={{ padding: '10px 15px 0' }}>
+              <button className={'fchip ' + (scope === 'week' ? 'on' : '')} onClick={() => setScope('week')}>This week ({d.summary.total})</button>
+              <button className={'fchip ' + (scope === 'pending' ? 'on' : '')} onClick={() => setScope('pending')}>All pending ({d.items.filter((i) => i.pending || i.partial).length})</button>
+              <button className={'fchip ' + (scope === 'all' ? 'on' : '')} onClick={() => setScope('all')}>Whole tab ({d.overall.total})</button>
             </div>
-            <table className="tbl">
+            <table>
               <thead><tr>
                 <th style={{ width: 84 }}>Date</th><th>Output</th><th style={{ width: 120 }}>Type</th><th style={{ width: 120 }}>Owner</th>
                 <th style={{ width: 130 }}>Stage</th><th>Exact gap</th><th style={{ width: 130 }}>Drive file</th><th style={{ width: 120 }} />
@@ -134,7 +134,7 @@ export default function Tracker({ sources, project, canShare }) {
                 {items.map((i, n) => (
                   <Fragment key={n}>
                     <tr onClick={() => setOpen(open === n ? null : n)} style={{ cursor: 'pointer', background: open === n ? 'var(--head)' : undefined }}>
-                      <td className="mono">{i.date || i.dateRaw || 'Not set'}</td>
+                      <td className="dim">{i.date || i.dateRaw || 'Not set'}</td>
                       <td>{i.title || 'Untitled output'}
                         {i.remarks ? <div style={{ color: 'var(--warn)', fontSize: 12 }}>{i.remarks}</div> : null}</td>
                       <td><span className="tag mute">{i.type || i.channel || (i.channels || []).join(', ') || 'Not set'}</span></td>
@@ -153,7 +153,7 @@ export default function Tracker({ sources, project, canShare }) {
                             {(i.captions || []).map((c, k) => (
                               <div key={k}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-                                  <span className="k" style={{ fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--faint)', fontWeight: 700 }}>{c.channel}</span>
+                                  <span className="lbl">{c.channel}</span>
                                   {c.has && !isUrl(c.text) ? <Copy text={c.text} /> : null}
                                 </div>
                                 {!c.has ? <span className="tag warn">nothing written</span>
@@ -176,10 +176,10 @@ export default function Tracker({ sources, project, canShare }) {
                     ) : null}
                   </Fragment>
                 ))}
-                {items.length === 0 ? <tr><td colSpan={8} className="empty">Nothing in this view.</td></tr> : null}
+                {items.length === 0 ? <tr><td colSpan={8} className="dim">Nothing in this view.</td></tr> : null}
               </tbody>
             </table>
-            <div className="calendar-passed">
+            <div style={{ padding: '12px 15px', borderTop: '1px solid var(--line2)', background: 'var(--okbg)', fontSize: 12.5, color: 'var(--ok)' }}>
               <b>{Math.max(0, d.summary.total - openGaps)} rows passed silently.</b> Click any row to read the full captions for every channel.
             </div>
           </>

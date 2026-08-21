@@ -47,11 +47,11 @@ export default async function Archive() {
           <p className="lede">Closed projects stay readable and searchable, out of active lists, with their operational record intact.</p>
         </div>
       </div>
-      {error ? <div className="alert">Sanity did not answer. <code>{error}</code></div> : null}
+      {error ? <div className="alertbar">Sanity did not answer. <code>{error}</code></div> : null}
 
       <div className="panel">
         <header><h2>Closing requires three things</h2></header>
-        <table className="tbl"><tbody>
+        <table><tbody>
           <tr><td className="b" style={{ width: 210 }}>Deliverables reconciled</td><td className="dim">Approved against committed, with any shortfall explained in writing</td></tr>
           <tr><td className="b">Final files linked</td><td className="dim">Masters, exports and the last approved versions</td></tr>
           <tr><td className="b">Dispute pack generated</td><td className="dim">Timeline, approval snapshots, feedback verbatim and baseline versions</td></tr>
@@ -60,7 +60,7 @@ export default async function Archive() {
 
       <div className="panel">
         <header><h2>Archived, {projects.length}</h2></header>
-        <table className="tbl">
+        <table>
           <thead><tr><th>Client</th><th>Project</th><th>Service</th><th>Closed</th><th>Delivered</th><th /></tr></thead>
           <tbody>
             {projects.map((p) => (
@@ -75,18 +75,18 @@ export default async function Archive() {
                   <Link className="btn sm" href={'/projects/' + p.slug}>Open</Link>
                 </td>
               </tr>))}
-            {projects.length === 0 ? <tr><td colSpan={6} className="empty">No project has a closed or archived status yet.</td></tr> : null}
+            {projects.length === 0 ? <tr><td colSpan={6} className="dim">No project has a closed or archived status yet.</td></tr> : null}
           </tbody>
         </table>
-        <div className="panelNote">The current project API cannot close a project or record a closure date. Existing non-active projects appear here; no closure values are invented.</div>
+        <div className="pad" style={{ borderTop: '1px solid var(--line2)' }}><p className="note">The current project API cannot close a project or record a closure date. Existing non-active projects appear here; no closure values are invented.</p></div>
       </div>
 
-      <details className="recordShelf">
-        <summary>Operational records kept alongside archived projects</summary>
+      <details style={{ marginTop: 16 }}>
+        <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--muted)', padding: '10px 2px' }}>Operational records kept alongside archived projects</summary>
 
       <div className="panel">
         <header><h2>Weeks that shipped</h2><span className="pill">{weeks.length}</span></header>
-        <table className="tbl">
+        <table>
           <thead><tr><th style={{ width: 170 }}>Project</th><th style={{ width: 130 }}>Week</th><th style={{ width: 96 }}>Posts</th><th style={{ width: 118 }}>Approved</th><th>Shipped by</th><th style={{ width: 128 }} /></tr></thead>
           <tbody>
             {weeks.map((w) => {
@@ -94,7 +94,7 @@ export default async function Archive() {
               return (
                 <tr key={w.projectSlug + w.week}>
                   <td>{w.projectName}<div style={{ color: 'var(--faint)', fontSize: 12 }}>{w.client}</div></td>
-                  <td className="mono">{dayOf(w.week)}</td>
+                  <td className="dim">{dayOf(w.week)}</td>
                   <td>{w.shipped || 'Not recorded'}</td>
                   <td>{ap ? <span className="tag ok">{ap}</span> : <span className="tag mute">none</span>}</td>
                   <td>{w.shipBy}, {when(w.shipAt)}
@@ -102,14 +102,14 @@ export default async function Archive() {
                   <td><Link className="btn sm" href={'/projects/' + w.projectSlug + '/pack'}>Record</Link></td>
                 </tr>);
             })}
-            {weeks.length === 0 ? <tr><td colSpan={6} className="empty">No week has shipped yet.</td></tr> : null}
+            {weeks.length === 0 ? <tr><td colSpan={6} className="dim">No week has shipped yet.</td></tr> : null}
           </tbody>
         </table>
       </div>
 
       <div className="panel">
         <header><h2>Work closed</h2><span className="pill">{work.length}</span></header>
-        <table className="tbl">
+        <table>
           <thead><tr><th>What</th><th style={{ width: 155 }}>Kind</th><th style={{ width: 150 }}>Project</th><th style={{ width: 118 }}>Who did it</th><th>Approved by</th></tr></thead>
           <tbody>
             {work.map((w) => (
@@ -120,33 +120,33 @@ export default async function Archive() {
                 <td>{w.assigneeName || 'Not recorded'}</td>
                 <td>{w.approvedBy ? w.approvedBy + ', ' + when(w.approvedAt) : <span style={{ color: 'var(--faint)' }}>not recorded</span>}</td>
               </tr>))}
-            {work.length === 0 ? <tr><td colSpan={5} className="empty">Nothing closed yet.</td></tr> : null}
+            {work.length === 0 ? <tr><td colSpan={5} className="dim">Nothing closed yet.</td></tr> : null}
           </tbody>
         </table>
       </div>
 
       <div className="panel">
         <header><h2>Requests decided</h2><span className="pill">{requests.length}</span></header>
-        <table className="tbl">
+        <table>
           <thead><tr><th style={{ width: 140 }}>Client</th><th>What they asked</th><th style={{ width: 108 }}>Scope</th><th style={{ width: 100 }}>Outcome</th><th>Reason given</th></tr></thead>
           <tbody>
             {requests.map((r) => (
               <tr key={r._id}>
-                <td>{r.clientName}<div className="mono" style={{ color: 'var(--faint)', fontSize: 12 }}>{when(r.at)}</div></td>
+                <td>{r.clientName}<div className="dim" style={{ color: 'var(--faint)', fontSize: 12 }}>{when(r.at)}</div></td>
                 <td>{r.what}</td>
                 <td><span className={'tag ' + (r.inScope === 'no' ? 'bad' : r.inScope === 'yes' ? 'ok' : 'warn')}>
                   {r.inScope === 'no' ? 'outside' : r.inScope === 'yes' ? 'inside' : 'unclear'}</span></td>
                 <td><span className={'tag ' + (r.state === 'accepted' ? 'ok' : r.state === 'declined' ? 'bad' : 'warn')}>{r.state}</span></td>
                 <td>{r.decision || 'No reason recorded'}{r.workId ? <div><Link href={'/work/' + r.workId} style={{ fontSize: 12.5 }}>the work it became</Link></div> : null}</td>
               </tr>))}
-            {requests.length === 0 ? <tr><td colSpan={5} className="empty">Nothing decided yet.</td></tr> : null}
+            {requests.length === 0 ? <tr><td colSpan={5} className="dim">Nothing decided yet.</td></tr> : null}
           </tbody>
         </table>
       </div>
 
       <div className="panel">
         <header><h2>Escalations closed</h2><span className="pill">{escalations.length}</span></header>
-        <table className="tbl">
+        <table>
           <thead><tr><th style={{ width: 130 }}>Raised</th><th>Why</th><th style={{ width: 130 }}>Owned by</th><th style={{ width: 108 }}>Outcome</th><th>What happened</th></tr></thead>
           <tbody>
             {escalations.map((e) => (
@@ -157,7 +157,7 @@ export default async function Archive() {
                 <td><span className="tag mute">{e.outcome || 'fixed'}</span></td>
                 <td>{e.resolution}<div style={{ color: 'var(--faint)', fontSize: 12 }}>closed by {e.resolvedBy}, {when(e.resolvedAt)}</div></td>
               </tr>))}
-            {escalations.length === 0 ? <tr><td colSpan={5} className="empty">Nothing closed yet.</td></tr> : null}
+            {escalations.length === 0 ? <tr><td colSpan={5} className="dim">Nothing closed yet.</td></tr> : null}
           </tbody>
         </table>
       </div>

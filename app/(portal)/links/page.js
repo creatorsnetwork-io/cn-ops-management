@@ -50,7 +50,7 @@ export default async function Links() {
         </div>
         <a className="btn dark" href="/work">New link</a>
       </div>
-      {error ? <div className="alert">Sanity did not answer. <code>{error}</code></div> : null}
+      {error ? <div className="alertbar">Sanity did not answer. <code>{error}</code></div> : null}
       <ClientLinks rows={rows} shares={shares} canRevoke={can(who, 'shareClientLink') === 'yes'} />
     </>
   );

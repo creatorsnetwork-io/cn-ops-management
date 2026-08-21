@@ -24,26 +24,26 @@ function NewWork({ projects, people, who, onDone, onCancel }) {
     <div className="panel">
       <header><h2>Open new work</h2><button className="btn sm" onClick={onCancel}>Cancel</button></header>
       <div style={{ padding: '14px 16px', display: 'grid', gap: 11, gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))' }}>
-        <label><div className="k">Project</div>
-          <select className="inp" value={f.projectSlug} onChange={(e) => set('projectSlug', e.target.value)}>
+        <label><div className="fl">Project</div>
+          <select className="f" value={f.projectSlug} onChange={(e) => set('projectSlug', e.target.value)}>
             {projects.map((p) => <option key={p.slug} value={p.slug}>{p.client}, {p.name}</option>)}
           </select></label>
-        <label><div className="k">What is it</div>
-          <select className="inp" value={f.kind} onChange={(e) => set('kind', e.target.value)}>
+        <label><div className="fl">What is it</div>
+          <select className="f" value={f.kind} onChange={(e) => set('kind', e.target.value)}>
             {Object.keys(KINDS).map((k) => <option key={k} value={k}>{KINDS[k].label}</option>)}
           </select></label>
-        <label><div className="k">Who is doing it</div>
-          <select className="inp" value={f.assignee} onChange={(e) => set('assignee', e.target.value)}>
+        <label><div className="fl">Who is doing it</div>
+          <select className="f" value={f.assignee} onChange={(e) => set('assignee', e.target.value)}>
             <option value="">Nobody yet</option>
             {canGiveTo.map((p) => <option key={p.slug} value={p.slug}>{p.name}</option>)}
           </select></label>
-        <label><div className="k">Due</div><input className="inp" type="date" value={f.due} onChange={(e) => set('due', e.target.value)} /></label>
-        <label style={{ gridColumn: '1 / -1' }}><div className="k">Title</div>
-          <input className="inp" value={f.title} placeholder="Destination page, Amalfi Coast" onChange={(e) => set('title', e.target.value)} /></label>
-        <label style={{ gridColumn: '1 / -1' }}><div className="k">Brief</div>
-          <textarea className="inp" value={f.brief} onChange={(e) => set('brief', e.target.value)} /></label>
-        <label style={{ gridColumn: '1 / -1' }}><div className="k">What counts as done</div>
-          <input className="inp" value={f.acceptance} placeholder="Live on staging, copy signed off, images compressed" onChange={(e) => set('acceptance', e.target.value)} /></label>
+        <label><div className="fl">Due</div><input type="date" value={f.due} onChange={(e) => set('due', e.target.value)} /></label>
+        <label style={{ gridColumn: '1 / -1' }}><div className="fl">Title</div>
+          <input type="text" value={f.title} placeholder="Destination page, Amalfi Coast" onChange={(e) => set('title', e.target.value)} /></label>
+        <label style={{ gridColumn: '1 / -1' }}><div className="fl">Brief</div>
+          <textarea value={f.brief} onChange={(e) => set('brief', e.target.value)} /></label>
+        <label style={{ gridColumn: '1 / -1' }}><div className="fl">What counts as done</div>
+          <input type="text" value={f.acceptance} placeholder="Live on staging, copy signed off, images compressed" onChange={(e) => set('acceptance', e.target.value)} /></label>
         <label style={{ display: 'flex', gap: 7, alignItems: 'center', fontSize: 13 }}>
           <input type="checkbox" checked={f.firstTime} onChange={(e) => set('firstTime', e.target.checked)} />
           First time we have done this, somebody shadows it
@@ -124,11 +124,11 @@ export default function WorkList({ who, people, projects, canCreate }) {
             {item.firstTime ? ' · first time' : ''}
           </span>
         </div>
-        <div className="mt work-owner">
+        <div className="mt">
           <div className="lbl">Owner</div>
           <div className="v">
             {ch.ok ? (
-              <select className="inp" value={item.assignee || ''} onChange={(e) => assign(item._id, e.target.value)}>
+              <select className="f" value={item.assignee || ''} onChange={(e) => assign(item._id, e.target.value)}>
                 <option value="">Nobody</option>
                 {list.map((p) => <option key={p.slug} value={p.slug}>{p.name}</option>)}
               </select>
@@ -137,7 +137,7 @@ export default function WorkList({ who, people, projects, canCreate }) {
         </div>
         <div className="mt">
           <div className="lbl">Due</div>
-          <div className="v mono">{dayOf(item.due) || 'Not set'}</div>
+          <div className="v">{dayOf(item.due) || 'Not set'}</div>
           {isLate(item) ? <span className="tag bad">late</span> : null}
         </div>
         <div className="mt">
@@ -153,7 +153,7 @@ export default function WorkList({ who, people, projects, canCreate }) {
           <Link className="btn sm" href={'/projects/' + item.projectSlug}>Project</Link>
           {allowed.length === 0 ? <Link className="btn sm" href={'/work/' + item._id}>Open it</Link> : null}
         </div>
-        {note[item._id] ? <div className="work-row-error">{note[item._id]}</div> : null}
+        {note[item._id] ? <div className="note" style={{ width: '100%', paddingLeft: 52, color: 'var(--bad)' }}>{note[item._id]}</div> : null}
       </div>
     );
   }
@@ -185,26 +185,26 @@ export default function WorkList({ who, people, projects, canCreate }) {
           </button>))}
       </div>
 
-      {err ? <div className="panel"><div className="row"><span className="dot no" /><div className="t"><b>Could not load work</b><span className="err">{err}</span></div></div></div> : null}
-      {!items && !err ? <div className="panel"><div className="empty">Loading.</div></div> : null}
+      {err ? <div className="alertbar"><span><b>Could not load work.</b> {err}</span></div> : null}
+      {!items && !err ? <div className="panel"><div className="pad note">Loading.</div></div> : null}
       {items && ['team', 'all'].includes(tab) ? (
         Object.keys(grouped).length ? Object.keys(grouped).map((key) => {
           const first = grouped[key][0];
           return (
-            <div className="panel work-project" key={key}>
+            <div className="panel" key={key}>
               <header><div><h2>{first.client} · {first.projectName}</h2><div className="sub2">{grouped[key].length} active item{grouped[key].length === 1 ? '' : 's'}</div></div>
                 <Link className="btn sm" href={'/projects/' + first.projectSlug}>Open project</Link></header>
               {grouped[key].map((i) => <WorkRow key={i._id} item={i} showProject={false} />)}
             </div>
           );
-        }) : <div className="panel"><div className="empty">Nothing in this view.</div></div>
+        }) : <div className="panel"><div className="pad note">Nothing in this view.</div></div>
       ) : null}
       {items && !['team', 'all'].includes(tab) ? (
-        <div className="panel work-project">
+        <div className="panel">
           <header><div><h2>{tab === 'mine' ? 'Assigned to you' : 'Waiting on someone else, then you'}</h2>
             <div className="sub2">Each row shows every action your role can take right now.</div></div></header>
           {shown.length ? shown.map((i) => <WorkRow key={i._id} item={i} showProject />)
-            : <div className="empty">{tab === 'mine' ? 'Nothing assigned to you.' : 'Nothing waiting on your sign off.'}</div>}
+            : <div className="pad note">{tab === 'mine' ? 'Nothing assigned to you.' : 'Nothing waiting on your sign off.'}</div>}
         </div>
       ) : null}
       <p className="note">

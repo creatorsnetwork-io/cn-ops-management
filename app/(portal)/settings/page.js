@@ -39,7 +39,7 @@ export default async function Page() {
         </div>
         <div className="rowb"><Link className="btn" href="/mobile">Mobile scope</Link><Link className="btn dark" href="/setup">Connections</Link></div>
       </div>
-      {error ? <div className="alert">Sanity did not answer. <code>{error}</code></div> : null}
+      {error ? <div className="alertbar">Sanity did not answer. <code>{error}</code></div> : null}
       <Settings house={house} projects={projects} limits={LIMITS} builtIn={BANNED} canEdit={can(who, 'settings') === 'yes'} />
     </>
   );

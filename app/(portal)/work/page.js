@@ -15,7 +15,7 @@ export default async function Work() {
 
   return (
     <>
-      {error ? <div className="alert">Sanity did not answer. <code>{error}</code></div> : null}
+      {error ? <div className="alertbar">Sanity did not answer. <code>{error}</code></div> : null}
       <WorkList who={who} people={people} projects={projects} canCreate={canCreateWork(who)} />
     </>
   );

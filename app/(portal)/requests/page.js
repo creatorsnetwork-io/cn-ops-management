@@ -18,7 +18,7 @@ export default async function Page() {
 
   return (
     <>
-      {error ? <div className="alert">Sanity did not answer. <code>{error}</code></div> : null}
+      {error ? <div className="alertbar">Sanity did not answer. <code>{error}</code></div> : null}
       <Requests clients={clients} projects={projects} people={people} />
     </>
   );

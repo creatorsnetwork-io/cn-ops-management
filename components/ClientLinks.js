@@ -61,7 +61,7 @@ export default function ClientLinks({ rows, shares, canRevoke }) {
   return (
     <>
     <div className="panel">
-      <table className="tbl">
+      <table>
         <thead><tr>
           <th>Client</th><th>What</th><th>URL</th><th>Sent</th><th>By</th>
           <th>Opens</th><th>Last open</th><th>Expiry</th><th>State</th><th />
@@ -73,7 +73,7 @@ export default function ClientLinks({ rows, shares, canRevoke }) {
               <tr key={r.id}>
                 <td className="b">{r.client || 'Not recorded'}<div className="sub2">{r.project}</div></td>
                 <td>{r.what}<div className="sub2">{r.activity}</div></td>
-                <td className="mono" style={{ wordBreak: 'break-all', fontSize: 11.5 }}>{r.url}</td>
+                <td className="dim" style={{ wordBreak: 'break-all', fontSize: 11.5 }}>{r.url}</td>
                 <td className="dim">{when(r.sent) || 'Not recorded'}</td>
                 <td className="dim">{r.by || 'Not recorded'}</td>
                 <td className="dim">Not tracked</td>
@@ -91,7 +91,7 @@ export default function ClientLinks({ rows, shares, canRevoke }) {
                 </td>
               </tr>);
           })}
-          {all.length === 0 ? <tr><td colSpan={10} className="empty">
+          {all.length === 0 ? <tr><td colSpan={10} className="dim">
             No live links. Client links come from a shipped week; briefs and call sheets come from work.
           </td></tr> : null}
         </tbody>

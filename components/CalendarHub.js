@@ -7,11 +7,11 @@ export default function CalendarHub({ projects, defaultSlug, canShare }) {
   const [slug, setSlug] = useState(first ? first.slug : '');
   const project = projects.find((p) => p.slug === slug) || first;
 
-  if (!project) return <div className="panel"><div className="empty">No social projects yet.</div></div>;
+  if (!project) return <div className="panel"><div className="pad note">No social projects yet.</div></div>;
 
   return (
     <>
-      <div className="filters calendar-projects">
+      <div className="filters">
         {projects.map((p) => (
           <button key={p.slug} className={'fchip ' + (p.slug === project.slug ? 'on' : '')} onClick={() => setSlug(p.slug)}>
             {p.client} · {p.name}
