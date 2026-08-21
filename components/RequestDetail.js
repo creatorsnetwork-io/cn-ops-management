@@ -36,6 +36,7 @@ export default function RequestDetail({ request: r, projects, people, canTriage 
 
   return (
     <>
+      <Link className="btn sm" href="/requests">Back to requests</Link>
       <div className="head"><div><div className={'eyebrow ' + (r.fault ? '' : 'n')}>{r.fault ? 'Fault, urgent' : 'Request'}</div><h1>{r.what}</h1>
         <p className="lede">{r.clientName} · {r.projectName || 'Project not linked'} · came in on {when(r.at)} via {r.channel || 'unknown'}.</p></div>
         <div className="rowb">{r.projectSlug ? <Link className="btn" href={'/projects/' + r.projectSlug}>Open project</Link> : null}
