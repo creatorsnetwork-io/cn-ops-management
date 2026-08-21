@@ -1,5 +1,6 @@
 'use client';
 import { Fragment, useEffect, useState } from 'react';
+import Link from 'next/link';
 
 function pretty(w, showYear) {
   if (!w) return '';
@@ -11,6 +12,15 @@ function pretty(w, showYear) {
 const FIELD_LABEL = { date:'Date', channel:'Channel', type:'Format', title:'Idea', caption:'Caption', creative:'Creative', status:'Status', approval:'Approval', remarks:'Remarks' };
 const isUrl = (t) => /^https?:\/\/\S+$/.test(String(t || '').trim());
 const stop = (e) => e.stopPropagation();
+const when = (t) => (t ? new Date(t).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'not read yet');
+
+function exactGap(item) {
+  const gaps = [];
+  if (!item.hasCaption) gaps.push('Caption missing');
+  else if (item.capMissing && item.capMissing.length) gaps.push('Missing ' + item.capMissing.join(', '));
+  if (!item.hasCreative) gaps.push('Creative missing');
+  return gaps.join(' · ');
+}
 
 function Copy({ text }) {
   const [done, setDone] = useState(false);
@@ -22,7 +32,7 @@ function Copy({ text }) {
   );
 }
 
-export default function Tracker({ sources }) {
+export default function Tracker({ sources, project, canShare }) {
   const live = sources.filter((s) => s.current);
   const [src, setSrc] = useState((live[0] || sources[0] || {})._key || '');
   const [tab, setTab] = useState('');
@@ -31,6 +41,8 @@ export default function Tracker({ sources }) {
   const [err, setErr] = useState(null);
   const [scope, setScope] = useState('week');
   const [open, setOpen] = useState(null);
+  const [check, setCheck] = useState({ tick: 0, row: null });
+  const [lastRow, setLastRow] = useState(null);
 
   const source = sources.find((s) => s._key === src) || sources[0];
 
@@ -46,23 +58,46 @@ export default function Tracker({ sources }) {
     if (source.year) u.searchParams.set('year', source.year);
     if (tab) u.searchParams.set('tab', tab);
     if (week) u.searchParams.set('week', week);
+    if (check.tick) u.searchParams.set('force', '1');
     fetch(u).then((r) => r.json()).then((j) => {
       if (!ok) return;
-      if (j.ok) { setD(j); if (!tab) setTab(j.tab); if (!week && j.week) setWeek(j.week); }
+      if (j.ok) {
+        setD(j); if (!tab) setTab(j.tab); if (!week && j.week) setWeek(j.week);
+        if (check.row) setLastRow(check.row);
+      }
       else setErr(j.error);
     }).catch((e) => ok && setErr(String(e)));
     return () => { ok = false; };
-  }, [src, tab, week, source && source.sheetId]);
+  }, [src, tab, week, source && source.sheetId, check.tick]);
 
   if (!source) return <div className="panel"><div className="empty">No calendar linked to this project yet. Add one on the Overview tab.</div></div>;
 
-  const items = d ? (scope === 'week' ? d.items.filter((i) => i.week === d.week) : scope === 'pending' ? d.items.filter((i) => i.pending) : d.items) : [];
+  const items = d ? (scope === 'week' ? d.items.filter((i) => i.week === d.week) : scope === 'pending' ? d.items.filter((i) => i.pending || i.partial) : d.items) : [];
+  const currentWeek = d ? d.items.filter((i) => i.week === d.week) : [];
+  const openGaps = currentWeek.filter((i) => i.pending || i.partial).length;
+  const recheck = (row) => { setLastRow(null); setCheck((c) => ({ tick: c.tick + 1, row: row || null })); };
 
   return (
     <>
+      <div className="head">
+        <div>
+          <div className="eyebrow">Internal calendar health</div>
+          <h1>{d ? openGaps + ' exact gap' + (openGaps === 1 ? '' : 's') + ' in ' + project.client : project.client}</h1>
+          <p className="lede">Read only. Pending comes from empty cells. Fix the source sheet, then recheck the row or the whole week.</p>
+        </div>
+        <div className="rowb">
+          {canShare && d && d.week ? <Link className="btn" href={'/projects/' + project.slug + '/review?week=' + d.week}>Share client link</Link> : null}
+          <a className="btn" target="_blank" rel="noreferrer" href={'https://docs.google.com/spreadsheets/d/' + source.sheetId}>Open sheet</a>
+          <button className="btn ai" disabled={!d} onClick={() => recheck(null)}>✦ Recheck all rows</button>
+        </div>
+      </div>
+
       <div className="panel">
+        {d ? <div className="trust"><span>Last read <b>{when(d.readAt)}</b></span><span>Rows checked <b>{d.summary.total}</b></span>
+          <span>Complete <b>{Math.max(0, d.summary.total - openGaps)}</b></span><span>Gaps <b>{openGaps}</b></span><span className="sp badge">Read only</span></div> : null}
         <header>
-          <h2>{d ? d.sheetTitle : 'Reading the sheet'}</h2>
+          <div><h2>{d ? project.client + ', ' + pretty(d.week, true) : 'Reading the sheet'}</h2>
+            <div className="sub2">{d ? d.sheetTitle + ', tab ' + d.tab : project.name}</div></div>
           <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {sources.length > 1 ? (
               <select className="inp" style={{ width: 'auto' }} value={src} onChange={(e) => setSrc(e.target.value)}>
@@ -76,7 +111,6 @@ export default function Tracker({ sources }) {
               <select className="inp" style={{ width: 'auto' }} value={week} onChange={(e) => setWeek(e.target.value)}>
                 {d.weeks.map((w) => <option key={w.week} value={w.week}>{pretty(w.week, w.week.slice(0, 4) !== String(source.year))} ({w.count})</option>)}
               </select>) : null}
-            <a className="btn sm" target="_blank" rel="noreferrer" href={'https://docs.google.com/spreadsheets/d/' + source.sheetId}>Open in Sheets</a>
           </span>
         </header>
 
@@ -86,57 +120,35 @@ export default function Tracker({ sources }) {
 
         {d && !d.reason ? (
           <>
-            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--line2)' }}>
-              <div className="stat">
-                <div><b>{d.summary.total}</b><span>this week</span></div>
-                <div><b>{d.summary.ready}</b><span>complete</span></div>
-                <div><b style={{ color: d.summary.pending ? 'var(--bad)' : 'var(--ok)' }}>{d.summary.pending}</b><span>pending</span></div>
-                <div><b>{d.summary.noCaption}</b><span>no caption</span></div>
-                <div><b>{d.summary.noCreative}</b><span>no creative</span></div>
-                <div><b>{d.summary.partial}</b><span>part written</span></div>
-                <div><b>{d.overall.total}</b><span>in this tab</span></div>
-              </div>
-            </div>
             <div className="tabs" style={{ margin: 0, padding: '0 10px' }}>
               <button className={scope === 'week' ? 'on' : ''} onClick={() => setScope('week')}>This week ({d.summary.total})</button>
-              <button className={scope === 'pending' ? 'on' : ''} onClick={() => setScope('pending')}>All pending ({d.overall.pending})</button>
+              <button className={scope === 'pending' ? 'on' : ''} onClick={() => setScope('pending')}>All pending ({d.items.filter((i) => i.pending || i.partial).length})</button>
               <button className={scope === 'all' ? 'on' : ''} onClick={() => setScope('all')}>Whole tab ({d.overall.total})</button>
             </div>
             <table className="tbl">
               <thead><tr>
-                <th style={{ width: 84 }}>Date</th><th style={{ width: 118 }}>Channel or format</th><th>Idea</th>
-                <th style={{ width: 200 }}>Caption</th><th>Creative</th><th style={{ width: 116 }}>State</th><th style={{ width: 46 }}>Row</th>
+                <th style={{ width: 84 }}>Date</th><th>Output</th><th style={{ width: 120 }}>Type</th><th style={{ width: 120 }}>Owner</th>
+                <th style={{ width: 130 }}>Stage</th><th>Exact gap</th><th style={{ width: 130 }}>Drive file</th><th style={{ width: 120 }} />
               </tr></thead>
               <tbody>
                 {items.map((i, n) => (
                   <Fragment key={n}>
                     <tr onClick={() => setOpen(open === n ? null : n)} style={{ cursor: 'pointer', background: open === n ? 'var(--head)' : undefined }}>
-                      <td className="mono">{i.date || i.dateRaw || '—'}</td>
-                      <td>{i.channel || (i.channels && i.channels.length ? i.channels.join(', ') : '') || i.type || '\u2014'}
-                        {i.type && (i.channel || (i.channels && i.channels.length)) ? <div style={{ color: 'var(--faint)', fontSize: 12 }}>{i.type}</div> : null}</td>
-                      <td>{i.title || '—'}
+                      <td className="mono">{i.date || i.dateRaw || 'Not set'}</td>
+                      <td>{i.title || 'Untitled output'}
                         {i.remarks ? <div style={{ color: 'var(--warn)', fontSize: 12 }}>{i.remarks}</div> : null}</td>
-                      <td>
-                        {i.captions && i.captions.length > 1 ? (
-                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                            {i.captions.map((c, k) => (
-                              <span key={k} className={'tag ' + (c.has ? 'ok' : 'warn')}>{c.channel}</span>
-                            ))}
-                          </div>
-                        ) : i.hasCaption ? <span className="tag ok">written</span> : <span className="tag warn">nothing written</span>}
-                      </td>
-                      <td>{i.creativeLink
-                        ? <a href={i.creativeLink} target="_blank" rel="noreferrer" onClick={stop}>{i.creativeText || 'open file'}</a>
-                        : i.creativeText
-                          ? i.creativeText
-                          : <span className="tag warn">missing</span>}</td>
-                      <td>{i.pending ? <span className="tag bad">pending</span> : <span className="tag ok">complete</span>}
-                        {i.status ? <div style={{ color: 'var(--faint)', fontSize: 12 }}>{i.status}</div> : null}</td>
-                      <td className="mono" style={{ color: 'var(--faint)' }}>{i.sheetRow}</td>
+                      <td><span className="tag mute">{i.type || i.channel || (i.channels || []).join(', ') || 'Not set'}</span></td>
+                      <td className="dim">Not mapped</td>
+                      <td className="dim">{i.status || 'Not set'}</td>
+                      <td>{i.pending || i.partial ? <span className="tag bad">{exactGap(i) || 'Pending'}</span> : <span className="tag ok">Cleared</span>}</td>
+                      <td>{i.creativeLink ? <a href={i.creativeLink} target="_blank" rel="noreferrer" onClick={stop}>Open file</a>
+                        : i.creativeText || <span className="tag warn">missing</span>}</td>
+                      <td>{lastRow === i.sheetRow ? <span className="tag ok">re-read</span>
+                        : <button className="btn sm ai" onClick={(e) => { stop(e); recheck(i.sheetRow); }}>Recheck row</button>}</td>
                     </tr>
                     {open === n ? (
                       <tr>
-                        <td colSpan={7} style={{ background: '#FCFDFE', borderBottom: '2px solid var(--line)' }}>
+                        <td colSpan={8} style={{ background: '#FCFDFE', borderBottom: '2px solid var(--line)' }}>
                           <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))' }}>
                             {(i.captions || []).map((c, k) => (
                               <div key={k}>
@@ -164,11 +176,11 @@ export default function Tracker({ sources }) {
                     ) : null}
                   </Fragment>
                 ))}
-                {items.length === 0 ? <tr><td colSpan={7} className="empty">Nothing in this view.</td></tr> : null}
+                {items.length === 0 ? <tr><td colSpan={8} className="empty">Nothing in this view.</td></tr> : null}
               </tbody>
             </table>
-            <div style={{ padding: '10px 16px', borderTop: '1px solid var(--line2)', fontSize: 12.5, color: 'var(--faint)' }}>
-              Click any row to read the full captions for every channel.
+            <div className="calendar-passed">
+              <b>{Math.max(0, d.summary.total - openGaps)} rows passed silently.</b> Click any row to read the full captions for every channel.
             </div>
           </>
         ) : null}
@@ -208,6 +220,9 @@ export default function Tracker({ sources }) {
           </div>
         </div>
       ) : null}
+
+      {d && d.week ? <div className="callout"><span><b>Generated copy never writes itself into the sheet.</b> A person pushes it, empty cells are the safe default, and an explicit replacement is logged.</span>
+        <Link className="btn" href={'/projects/' + project.slug + '/review?week=' + d.week}>Review and push</Link></div> : null}
     </>
   );
 }

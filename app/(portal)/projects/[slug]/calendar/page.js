@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { sanity } from '../../../../../lib/sanity';
 import Tracker from '../../../../../components/Tracker';
 import ProjectTabs from '../../../../../components/ProjectTabs';
+import { meSlug } from '../../../../../lib/me';
+import { can } from '../../../../../lib/perm';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +23,7 @@ export default async function ProjectCalendar({ params }) {
       <h1>{p.name}</h1>
       <p className="lede">Read live from the sheet. The sheet is untouched.</p>
       <ProjectTabs slug={p.slug} type={p.type} on="/calendar" />
-      <Tracker sources={p.calendarSources || []} />
+      <Tracker sources={p.calendarSources || []} project={p} canShare={can(meSlug(), 'shareClientLink') === 'yes'} />
     </>
   );
 }

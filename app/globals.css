@@ -525,3 +525,46 @@ a.sr{text-decoration:none;color:inherit}
   .sov{padding:62px 10px}
   .searchHint{display:none}
 }
+
+/* ---------- Round 3 daily screens ---------- */
+.work-project{margin-top:14px}
+.work-owner{flex-basis:132px!important}
+.work-owner .inp{padding:4px 6px;font-size:12px;min-width:118px}
+.work-row-error{width:100%;padding-left:52px;color:var(--bad);font-size:12px}
+.calendar-projects{margin-top:2px;margin-bottom:18px}
+.calendar-passed{padding:11px 15px;border-top:1px solid var(--line2);background:var(--okbg);font-size:12.5px;color:var(--ok)}
+.calendar-passed b{margin-right:5px}
+.qc-flag-card{padding:13px 15px;border-bottom:1px solid var(--line2);display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.qc-flag-card:last-child{border-bottom:none}
+.qc-severity{width:40px;height:25px;border-radius:6px;font-size:9.5px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:0 0 40px}
+.qc-severity.bad{background:var(--badbg);color:var(--bad)}
+.qc-severity.warn{background:var(--warnbg);color:var(--warn)}
+.qc-flag-copy{flex:1;min-width:280px}
+.qc-flag-copy>b{display:block;font-size:13.5px}
+.qc-actions{max-width:440px;align-items:flex-start}
+.qc-error{color:var(--bad);font-size:12px;margin-top:7px}
+.qc-progress{margin:0;align-self:center}
+.qc-registers{align-items:start}
+.feedback-log{margin-bottom:16px}
+.feedback-log-grid{display:grid;gap:12px}
+.feedback-filters{margin-top:18px}
+.feedback-cards{align-items:start}
+.feedback-cards .fb{height:100%}
+.request-templates{margin-top:16px}
+.request-back{margin-bottom:16px}
+.request-back .tb{text-decoration:none}
+.request-paths{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.request-paths .btn{display:flex;text-align:left;flex-direction:column;align-items:flex-start;gap:3px;white-space:normal}
+.request-paths .btn b{font-size:13px}
+.request-paths .btn span{font-size:11.5px;opacity:.8}
+.request-convert{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.request-convert .wide{grid-column:1 / -1}
+.request-copy{font-size:13.5px;line-height:1.65}
+.request-log-note{border-top:1px solid var(--line2);font-size:12.5px;color:var(--faint)}
+
+@media (max-width: 820px){
+  .wi .ac{width:100%;padding-left:52px}
+  .qc-actions{width:100%;max-width:none;padding-left:52px}
+  .request-paths,.request-convert{grid-template-columns:1fr}
+  .request-convert .wide{grid-column:auto}
+}

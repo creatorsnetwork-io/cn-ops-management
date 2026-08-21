@@ -18,12 +18,6 @@ export default async function Page() {
 
   return (
     <>
-      <div className="eyebrow">Inbound</div>
-      <h1>Requests</h1>
-      <p className="lede">
-        Anything a client asked for that was not in the plan. Log it in ten seconds, then decide
-        whether it is inside the retainer or not.
-      </p>
       {error ? <div className="alert">Sanity did not answer. <code>{error}</code></div> : null}
       <Requests clients={clients} projects={projects} people={people} />
     </>

@@ -6,6 +6,14 @@ import { KINDS, LABEL } from '../lib/work';
 const when = (t) => (t ? new Date(t).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
 const CHAN = { whatsapp: 'WhatsApp', email: 'Email', call: 'Call', meeting: 'Meeting' };
 const SCOPE = { yes: ['in scope', 'ok'], no: ['out of scope', 'bad'], unclear: ['scope unclear', 'warn'] };
+const dayOf = (d) => (d ? new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : 'Not set');
+
+function requestType(r) {
+  if (r.fault) return 'Fault';
+  if (r.inScope === 'no') return 'Extra scope';
+  if (r.workId) return 'Converted work';
+  return 'Unclassified';
+}
 
 function LogForm({ clients, projects, onDone, onCancel }) {
   const [f, setF] = useState({ clientSlug: clients[0]?.slug || '', projectSlug: '', from: '', channel: 'whatsapp', what: '', due: '' });
@@ -79,16 +87,21 @@ function Row({ r, projects, people, canTriage, reload }) {
         <td className="mono" style={{ whiteSpace: 'nowrap' }}>{when(r.at)}
           <div style={{ color: 'var(--faint)', fontSize: 12 }}>{CHAN[r.channel]}</div></td>
         <td>{r.clientName}<div style={{ color: 'var(--faint)', fontSize: 12 }}>{r.from || 'unnamed'}</div></td>
+        <td>{r.projectName || <span className="tag warn">not linked</span>}</td>
+        <td><span className={'tag ' + (r.fault ? 'bad' : 'info')}>{requestType(r)}</span></td>
         <td style={{ whiteSpace: 'pre-wrap' }}>{r.what}
           {r.decision ? <div style={{ color: 'var(--muted)', fontSize: 12.5, marginTop: 5 }}>Decision: {r.decision}</div> : null}</td>
-        <td><span className={'tag ' + sc[1]}>{sc[0]}</span></td>
+        <td className="mono">{dayOf(r.due)}<div style={{ color: 'var(--faint)', fontSize: 11 }}>requested date</div></td>
+        <td>{r.receivedBy || 'Not assigned'}<div style={{ color: 'var(--faint)', fontSize: 12 }}>intake owner</div></td>
         <td>
           <span className={'tag ' + (r.state === 'accepted' ? 'ok' : r.state === 'declined' ? 'bad' : r.state === 'parked' ? 'warn' : 'mute')}>{r.state}</span>
+          <div style={{ marginTop: 4 }}><span className={'tag ' + sc[1]}>{sc[0]}</span></div>
           {r.workId ? <div style={{ marginTop: 4 }}><Link href={'/work/' + r.workId} style={{ fontSize: 12.5 }}>{LABEL[r.workState] || 'open'}: {r.workTitle}</Link></div> : null}
         </td>
         <td>
           {canTriage ? (
             <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+              <Link className="btn sm" href={'/requests/' + encodeURIComponent(r._id)}>Open</Link>
               {r.state === 'new' ? <>
                 {r.inScope !== 'yes' ? <button className="btn sm" disabled={busy} onClick={() => send('scope', { inScope: 'yes' })}>In scope</button> : null}
                 {r.inScope !== 'no' ? <button className="btn sm" disabled={busy} onClick={() => send('scope', { inScope: 'no' })}>Out of scope</button> : null}
@@ -96,11 +109,11 @@ function Row({ r, projects, people, canTriage, reload }) {
                 <button className="btn sm" onClick={() => setMode('decline')}>Decline</button>
                 <button className="btn sm" onClick={() => setMode('park')}>Park</button>
               </> : <button className="btn sm" disabled={busy} onClick={() => send('reopen')}>Reopen</button>}
-            </div>) : <span className="pill">view only</span>}
+            </div>) : <Link className="btn sm" href={'/requests/' + encodeURIComponent(r._id)}>Open</Link>}
         </td>
       </tr>
       {mode ? (
-        <tr><td colSpan={6} style={{ background: '#FCFDFE' }}>
+        <tr><td colSpan={9} style={{ background: '#FCFDFE' }}>
           {mode === 'accept' ? (
             <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))' }}>
               <label><div className="k">Project</div>
@@ -160,9 +173,16 @@ export default function Requests({ clients, projects, people }) {
 
   return (
     <>
+      <div className="head"><div><div className="eyebrow">Unplanned work</div><h1>Requests</h1>
+        <p className="lede">Capture the ask first. Scope, due date and ownership come from the linked project and the person who makes the decision.</p></div>
+        <button className="btn dark" onClick={() => setAdding(true)}>Log request</button></div>
+
+      <div className="alertbar"><span><b>Faults behave differently.</b> They should skip normal lead time and route to Aashif as urgent.</span>
+        <span className="tag bad">API field required</span></div>
+
       {adding
         ? <LogForm clients={clients} projects={projects} onCancel={() => setAdding(false)} onDone={() => { setAdding(false); load(); }} />
-        : <div style={{ marginTop: 18 }}><button className="btn dark" onClick={() => setAdding(true)}>Log a request</button></div>}
+        : null}
 
       <div className="tabs">
         <button className={tab === 'open' ? 'on' : ''} onClick={() => setTab('open')}>Not decided ({open.length})</button>
@@ -175,19 +195,31 @@ export default function Requests({ clients, projects, people }) {
         {!d && !err ? <div className="empty">Loading.</div> : null}
         {d ? (
           <table className="tbl">
-            <thead><tr><th style={{ width: 120 }}>When</th><th style={{ width: 138 }}>Who</th><th>What they asked for</th><th style={{ width: 108 }}>Scope</th><th style={{ width: 150 }}>State</th><th style={{ width: 250 }} /></tr></thead>
+            <thead><tr><th style={{ width: 120 }}>In</th><th style={{ width: 130 }}>Client</th><th style={{ width: 145 }}>Project</th><th style={{ width: 120 }}>Type</th>
+              <th>What</th><th style={{ width: 95 }}>Earliest</th><th style={{ width: 110 }}>Owner</th><th style={{ width: 130 }}>State</th><th style={{ width: 250 }} /></tr></thead>
             <tbody>
               {shown.map((r) => <Row key={r._id} r={r} projects={projects} people={people} canTriage={d.canTriage} reload={load} />)}
-              {shown.length === 0 ? <tr><td colSpan={6} className="empty">
+              {shown.length === 0 ? <tr><td colSpan={9} className="empty">
                 {tab === 'open' ? 'Nothing waiting on a decision.' : tab === 'scope' ? 'Nothing logged as outside the retainer.' : 'Nothing decided yet.'}
               </td></tr> : null}
             </tbody>
           </table>) : null}
       </div>
+      <div className="panel request-templates"><header><div><h2>Types with a template</h2><div className="sub2">Repeatable asks start from a known structure.</div></div></header>
+        <table className="tbl"><tbody>
+          {[['Award nomination','Post structure, caption skeleton, asset list and approval path'],
+            ['Event participation','Pre-event, on-ground and post-event set, plus a client footage checklist'],
+            ['New joiner','Photo specification, bio questions, caption structure and channel plan'],
+            ['Fault','Skips lead time, routes to Aashif and is urgent by default']].map((r) => (
+              <tr key={r[0]}><td className="b" style={{ width: 180 }}>{r[0]}</td><td className="dim">{r[1]}</td>
+                <td style={{ width: 130 }}><span className={'tag ' + (r[0] === 'Fault' ? 'bad' : 'info')}>{r[0] === 'Fault' ? 'needs API field' : 'template'}</span></td></tr>))}
+        </tbody></table>
+      </div>
       <p className="note">
         Marking something outside the retainer writes an escalation, so unpaid extras become a list you
         can put in front of a client at renewal rather than a feeling that the year was busier than it looked.
       </p>
+      <p className="note">The current request API does not accept or return a request type or fault marker. The catalogue and Fault rule are visible here, but operational Fault routing cannot be enabled without an API change.</p>
     </>
   );
 }
