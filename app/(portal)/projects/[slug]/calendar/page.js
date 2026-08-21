@@ -11,7 +11,10 @@ export default async function ProjectCalendar({ params }) {
   let p = null, error = null;
   try {
     p = await sanity(true).fetch(
-      `*[_type=="project" && slug==$s][0]{slug,name,type,calendarSources,"client":client->name}`, { s: params.slug });
+      `*[_type=="project" && slug==$s][0]{
+        slug,name,type,calendarSources,"client":client->name,
+        "workCount":count(*[_type=="work" && references(^._id)])
+      }`, { s: params.slug });
   } catch (e) { error = e.message; }
 
   if (error) return <><h1>Calendar tracker</h1><div className="alertbar">Sanity did not answer. <code>{error}</code></div></>;
@@ -22,7 +25,7 @@ export default async function ProjectCalendar({ params }) {
       <div className="eyebrow">{p.client}</div>
       <h1>{p.name}</h1>
       <p className="lede">Read live from the sheet. The sheet is untouched.</p>
-      <ProjectTabs slug={p.slug} type={p.type} on="/calendar" />
+      <ProjectTabs slug={p.slug} type={p.type} on="/calendar" workCount={p.workCount} />
       <Tracker sources={p.calendarSources || []} project={p} canShare={can(meSlug(), 'shareClientLink') === 'yes'} />
     </>
   );

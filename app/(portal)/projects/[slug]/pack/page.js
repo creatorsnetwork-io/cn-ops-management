@@ -16,7 +16,10 @@ export default async function Pack({ params, searchParams }) {
   let p = null, snaps = [], roll = null, error = null;
   try {
     p = await sanity(true).fetch(
-      `*[_type=="project" && slug==$s][0]{slug,name,type,deliverables,"client":client->{name,code}}`, { s: params.slug });
+      `*[_type=="project" && slug==$s][0]{
+        slug,name,type,deliverables,"client":client->{name,code},
+        "workCount":count(*[_type=="work" && references(^._id)])
+      }`, { s: params.slug });
     if (p) {
       snaps = await sanity(true).fetch(
         `*[_type=="snapshot" && projectSlug==$s
@@ -38,7 +41,7 @@ export default async function Pack({ params, searchParams }) {
 
   return (
     <>
-      <ProjectTabs slug={p.slug} type={p.type} on="/pack" />
+      <ProjectTabs slug={p.slug} type={p.type} on="/pack" workCount={p.workCount} />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <div>

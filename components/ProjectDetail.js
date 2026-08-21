@@ -1,5 +1,4 @@
 'use client';
-import { useState } from 'react';
 import Link from 'next/link';
 import CalendarSources from './CalendarSources';
 import Contract from './Contract';
@@ -23,21 +22,12 @@ const STAGES = {
 const pct = (a, b) => (!b ? 0 : Math.min(100, Math.round((a / b) * 100)));
 const when = (t) => (t ? new Date(t).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Time not recorded');
 
-export default function ProjectDetail({ p, activity, perms }) {
-  const [tab, setTab] = useState('overview');
+export default function ProjectDetail({ p, activity, perms, activeTab }) {
+  const tab = activeTab;
   const stages = STAGES[p.type] || ['Plan', 'Production', 'Client', 'Approved'];
   const stageIndex = p.stage === 'Closed' ? stages.length : Math.max(0, stages.indexOf(p.stage));
   const latestReview = (p.reviews || [])[0];
-  const tabs = [['overview', 'Overview']];
-  if (p.type === 'social') tabs.push(['ideas', 'Ideas']);
-  tabs.push(['deliverables', 'Deliverables']);
-  tabs.push(['work', 'Work items (' + (p.work || []).length + ')']);
-  tabs.push(['activity', 'Activity log']);
-
-  function openContract() {
-    setTab('deliverables');
-    setTimeout(() => document.getElementById('contract')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
-  }
+  const contractUrl = '/projects/' + p.slug + '?tab=deliverables#contract';
 
   return (
     <>
@@ -51,7 +41,7 @@ export default function ProjectDetail({ p, activity, perms }) {
           {p.type === 'social' ? <Link className="btn ai" href={'/projects/' + p.slug + '/review'}>✦ Plan week</Link> : null}
           {p.type === 'social' && perms.canShare
             ? <Link className="btn" href={'/projects/' + p.slug + '/review' + (latestReview?.week ? '?week=' + latestReview.week : '')}>Share client link</Link> : null}
-          <button className="btn" onClick={openContract}>Contract</button>
+          <Link className="btn" href={contractUrl}>Contract</Link>
           {perms.canClose ? <button className="btn off" disabled title="The live API does not expose project closure yet.">Close project</button> : null}
         </div>
       </div>
@@ -63,8 +53,7 @@ export default function ProjectDetail({ p, activity, perms }) {
         <div><div className="lbl">Client access</div><div className="v">{p.hasClientAccess ? 'Review link live' : 'Not invited'}</div><div className="s">No internal notes exposed</div></div>
       </div>
 
-      <ProjectTabs slug={p.slug} type={p.type} on="" localTabs={tabs}
-        activeLocalTab={tab} onLocalTab={setTab} />
+      <ProjectTabs slug={p.slug} type={p.type} on="" activeTab={tab} workCount={(p.work || []).length} />
 
       {tab === 'overview' ? <>
         <div className="panel">
@@ -78,7 +67,7 @@ export default function ProjectDetail({ p, activity, perms }) {
 
         <div className="grid2">
           <div className="srcs">
-            <div className="src"><div className="ic">▤</div><div className="tx"><div className="lbl">Contract</div><div className="v">{p.contract?.filename || 'Not uploaded'}</div><div className="s">Deliverable baseline and source agreement</div></div><button className="btn sm" onClick={openContract}>Open</button></div>
+            <div className="src"><div className="ic">▤</div><div className="tx"><div className="lbl">Contract</div><div className="v">{p.contract?.filename || 'Not uploaded'}</div><div className="s">Deliverable baseline and source agreement</div></div><Link className="btn sm" href={contractUrl}>Open</Link></div>
             <div className="src"><div className="ic">◫</div><div className="tx"><div className="lbl">Project brief / PRD</div><div className="v">{p.prd ? 'Working document ready' : 'Not started'}</div><div className="s">Versioned requirements</div></div><Link className="btn sm" href={'/projects/' + p.slug + '/prd'}>Open</Link></div>
             <div className="src"><div className="ic">✦</div><div className="tx"><div className="lbl">Client brand brain</div><div className="v">{p.voice ? 'Voice context written' : 'Context missing'}</div><div className="s">Managed separately from this round</div></div></div>
             <div className="src"><div className="ic">↗</div><div className="tx"><div className="lbl">Client Drive</div><div className="v">{p.client?.driveFolderId ? p.client.code + ' folder' : 'Not linked'}</div><div className="s">Working files stay in Google Drive</div></div>{p.client?.driveFolderId ? <a className="btn sm" href={'https://drive.google.com/drive/folders/' + p.client.driveFolderId} target="_blank" rel="noreferrer">Open</a> : null}</div>
