@@ -95,7 +95,7 @@ export default function ClientDetail({ c, onb, canEdit, links, who }) {
         </div>) : null}
 
       {msg ? <div className="guard">{msg}</div> : null}
-      {err ? <div className="alert">{err}</div> : null}
+      {err ? <div className="alertbar">{err}</div> : null}
 
       <div className="grid2">
         <div>
@@ -103,7 +103,7 @@ export default function ClientDetail({ c, onb, canEdit, links, who }) {
             <header>
               <div><h2>Projects</h2><div className="sub2">Contracts, timelines and deliverables live here, not on the client.</div></div>
             </header>
-            <table className="tbl">
+            <table>
               <thead><tr><th>Project</th><th style={{ width: 142 }}>Service</th><th style={{ width: 100 }}>Owner</th><th style={{ width: 142 }}>Approved</th><th style={{ width: 118 }}>State</th></tr></thead>
               <tbody>
                 {(c.projects || []).map((p) => (
@@ -115,7 +115,7 @@ export default function ClientDetail({ c, onb, canEdit, links, who }) {
                       <div className="bar2" style={{ marginTop: 4 }}><i style={{ width: pct(p.approved, p.target) + '%' }} /></div></td>
                     <td><span className={'tag ' + tagFor(p.health)}>{p.health}</span></td>
                   </tr>))}
-                {(c.projects || []).length === 0 ? <tr><td colSpan={5} className="empty">No projects yet.</td></tr> : null}
+                {(c.projects || []).length === 0 ? <tr><td colSpan={5} className="dim">No projects yet.</td></tr> : null}
               </tbody>
             </table>
           </div>
@@ -142,15 +142,15 @@ export default function ClientDetail({ c, onb, canEdit, links, who }) {
                     ['turnaround', 'Turnaround they expect', '48 hours on captions'],
                     ['renewal', 'Renewal', '31 Dec 2026'],
                     ['driveFolderId', 'Drive folder ID', '']].map(([k, label, ph]) => (
-                    <label key={k}><div className="lbl">{label}</div>
-                      <input className={'inp' + (k === 'driveFolderId' ? ' mono' : '')} value={f[k]} disabled={!canEdit} placeholder={ph}
+                    <label key={k}><div className="fl">{label}</div>
+                      <input type="text" value={f[k]} disabled={!canEdit} placeholder={ph}
                         onChange={(e) => setF({ ...f, [k]: e.target.value })} /></label>))}
                 </div>
               </div>
-              <label><div className="lbl">Anything the team should know</div>
-                <textarea className="inp" value={f.note} disabled={!canEdit} onChange={(e) => setF({ ...f, note: e.target.value })} /></label>
+              <label><div className="fl">Anything the team should know</div>
+                <textarea value={f.note} disabled={!canEdit} onChange={(e) => setF({ ...f, note: e.target.value })} /></label>
             </div>
-            <table className="tbl">
+            <table>
               <tbody>
                 <tr><td className="dim" style={{ width: 180 }}>Approvers named</td><td className="b">{contacts.filter((x) => x.canApprove).map((x) => x.name).join(', ') || 'nobody yet'}</td></tr>
                 <tr><td className="dim">Calendar</td><td className="b">
@@ -191,7 +191,7 @@ export default function ClientDetail({ c, onb, canEdit, links, who }) {
         <div>
           <div className="panel">
             <header><div><h2>Decision rights</h2><div className="sub2">The agreement, so nobody has to ask.</div></div></header>
-            <table className="tbl"><tbody>
+            <table><tbody>
               {RIGHTS.map(([a, b]) => <tr key={a}><td className="b" style={{ width: 150 }}>{a}</td><td className="dim">{b}</td></tr>)}
             </tbody></table>
           </div>
@@ -204,18 +204,18 @@ export default function ClientDetail({ c, onb, canEdit, links, who }) {
                 <button className="btn sm dark" disabled={busy === 'contacts'} onClick={() => post({ action: 'contacts', contacts })}>Save</button>
               </span> : <span className="pill">{contacts.filter((x) => x.canApprove).length} can approve</span>}
             </header>
-            <table className="tbl">
+            <table>
               <thead><tr><th>Name</th><th>Role</th><th>Email</th><th>Phone</th><th>Approves</th>{canEdit ? <th /> : null}</tr></thead>
               <tbody>
                 {contacts.map((x, i) => (
                   <tr key={x._key || i}>
-                    {['name', 'role', 'email', 'phone'].map((k) => <td key={k}><input className="inp" value={x[k] || ''} disabled={!canEdit}
+                    {['name', 'role', 'email', 'phone'].map((k) => <td key={k}><input type="text" value={x[k] || ''} disabled={!canEdit}
                       onChange={(e) => setContacts(contacts.map((y, j) => (j === i ? { ...y, [k]: e.target.value } : y)))} /></td>)}
                     <td style={{ textAlign: 'center' }}><input type="checkbox" checked={!!x.canApprove} disabled={!canEdit}
                       onChange={(e) => setContacts(contacts.map((y, j) => (j === i ? { ...y, canApprove: e.target.checked } : y)))} /></td>
-                    {canEdit ? <td><button className="btn link" onClick={() => setContacts(contacts.filter((_, j) => j !== i))}>Drop</button></td> : null}
+                    {canEdit ? <td><button className="btn sm" onClick={() => setContacts(contacts.filter((_, j) => j !== i))}>Drop</button></td> : null}
                   </tr>))}
-                {contacts.length === 0 ? <tr><td colSpan={canEdit ? 6 : 5} className="empty">Nobody recorded. Marking who can approve stops client approval meaning three different people.</td></tr> : null}
+                {contacts.length === 0 ? <tr><td colSpan={canEdit ? 6 : 5} className="dim">Nobody recorded. Marking who can approve stops client approval meaning three different people.</td></tr> : null}
               </tbody>
             </table>
           </div>
@@ -228,16 +228,16 @@ export default function ClientDetail({ c, onb, canEdit, links, who }) {
                 <button className="btn sm dark" disabled={busy === 'obligations'} onClick={() => post({ action: 'obligations', obligations: ob })}>Save</button>
               </span> : null}
             </header>
-            <table className="tbl">
+            <table>
               <thead><tr><th>What</th><th>Next due</th><th>Owner</th><th>Every</th><th /></tr></thead>
               <tbody>
                 {ob.map((x, i) => (
                   <tr key={x._key || i}>
-                    <td><input className="inp" value={x.name} disabled={!canEdit} onChange={(e) => setOb(ob.map((y, j) => (j === i ? { ...y, name: e.target.value } : y)))} /></td>
-                    <td><input className="inp" type="date" value={x.due || ''} disabled={!canEdit} onChange={(e) => setOb(ob.map((y, j) => (j === i ? { ...y, due: e.target.value } : y)))} />
+                    <td><input type="text" value={x.name} disabled={!canEdit} onChange={(e) => setOb(ob.map((y, j) => (j === i ? { ...y, name: e.target.value } : y)))} /></td>
+                    <td><input type="date" value={x.due || ''} disabled={!canEdit} onChange={(e) => setOb(ob.map((y, j) => (j === i ? { ...y, due: e.target.value } : y)))} />
                       {x.due && x.due < today() ? <div><span className="tag bad">overdue</span></div> : null}</td>
-                    <td><input className="inp" value={x.owner} disabled={!canEdit} onChange={(e) => setOb(ob.map((y, j) => (j === i ? { ...y, owner: e.target.value } : y)))} /></td>
-                    <td><select className="inp" value={x.every} disabled={!canEdit} onChange={(e) => setOb(ob.map((y, j) => (j === i ? { ...y, every: e.target.value } : y)))}>
+                    <td><input type="text" value={x.owner} disabled={!canEdit} onChange={(e) => setOb(ob.map((y, j) => (j === i ? { ...y, owner: e.target.value } : y)))} /></td>
+                    <td><select className="f" value={x.every} disabled={!canEdit} onChange={(e) => setOb(ob.map((y, j) => (j === i ? { ...y, every: e.target.value } : y)))}>
                       <option value="month">month</option><option value="quarter">quarter</option><option value="year">year</option><option value="once">once</option>
                     </select></td>
                     <td>
@@ -245,7 +245,7 @@ export default function ClientDetail({ c, onb, canEdit, links, who }) {
                       {x.doneAt ? <div className="dim" style={{ fontSize: 11.5, marginTop: 3 }}>last {when(x.doneAt)}</div> : null}
                     </td>
                   </tr>))}
-                {ob.length === 0 ? <tr><td colSpan={5} className="empty">Nothing recorded. Monthly report, invoice, renewal conversation and domain renewal are the usual four.</td></tr> : null}
+                {ob.length === 0 ? <tr><td colSpan={5} className="dim">Nothing recorded. Monthly report, invoice, renewal conversation and domain renewal are the usual four.</td></tr> : null}
               </tbody>
             </table>
             <div style={{ padding: '11px 15px', borderTop: '1px solid var(--line2)', fontSize: 12.5, color: 'var(--faint)' }}>
@@ -255,7 +255,7 @@ export default function ClientDetail({ c, onb, canEdit, links, who }) {
 
           <div className="panel">
             <header><h2>Needs looking at</h2></header>
-            <table className="tbl"><tbody>
+            <table><tbody>
               <tr><td className="dim">Late work</td><td className="b">{c.late ? <span className="tag bad">{c.late}</span> : <span className="tag ok">none</span>}</td></tr>
               <tr><td className="dim">Open decisions</td><td className="b">{c.escalations ? <span className="tag bad">{c.escalations}</span> : <span className="tag ok">none</span>}</td></tr>
               <tr><td className="dim">Undecided asks</td><td className="b">{c.requests ? <span className="tag warn">{c.requests}</span> : <span className="tag ok">none</span>}</td></tr>

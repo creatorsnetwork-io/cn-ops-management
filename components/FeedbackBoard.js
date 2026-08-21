@@ -65,7 +65,7 @@ function FeedbackCard({ item, canTriage }) {
       </div>
       <div className="q">{item.text || 'Changes requested without a written comment.'}</div>
       <div className="meta">{item.by || 'the client'} · {when(item.at)} · {item.kind === 'social' ? 'client review link' : 'work item'} · round {item.round} · included rounds not set</div>
-      {err ? <div className="qc-error">{err}</div> : null}
+      {err ? <div className="note" style={{ color: 'var(--bad)', marginTop: 7 }}>{err}</div> : null}
       <div className="acts">
         {item.kind === 'social' && !evidence ? <button className="btn sm" disabled={busy === 'evidence'} onClick={loadEvidence}>{busy === 'evidence' ? 'Reading' : 'Load source'}</button> : null}
         <Link className="btn dark" href={source}>Create revision</Link>
@@ -97,13 +97,13 @@ function LogFeedback({ candidates, onClose }) {
   }
 
   return (
-    <div className="panel feedback-log"><header><div><h2>Log feedback on other work</h2><div className="sub2">This uses the live Client asked for changes action and moves the item into revision.</div></div>
+    <div className="panel"><header><div><h2>Log feedback on other work</h2><div className="sub2">This uses the live Client asked for changes action and moves the item into revision.</div></div>
       <button className="btn sm" onClick={onClose}>Cancel</button></header>
-      <div className="pad feedback-log-grid">
-        <label><div className="lbl">Work with the client now</div><select className="inp" value={workId} onChange={(e) => setWorkId(e.target.value)}>
+      <div className="pad" style={{ display: 'grid', gap: 12 }}>
+        <label><div className="fl">Work with the client now</div><select className="f" value={workId} onChange={(e) => setWorkId(e.target.value)}>
           {candidates.map((i) => <option key={i._id} value={i._id}>{i.client} · {i.projectName} · {i.title}</option>)}</select></label>
-        <label><div className="lbl">What the client asked for</div><textarea className="inp" value={text} onChange={(e) => setText(e.target.value)} /></label>
-        {err ? <div className="qc-error">{err}</div> : null}
+        <label><div className="fl">What the client asked for</div><textarea value={text} onChange={(e) => setText(e.target.value)} /></label>
+        {err ? <div className="note" style={{ color: 'var(--bad)' }}>{err}</div> : null}
         <div className="rowb"><button className="btn dark" disabled={busy || !workId || !text.trim()} onClick={save}>{busy ? 'Saving' : 'Log feedback'}</button>
           <Link className="btn" href="/calendar">Feedback on a social post starts from its weekly review</Link></div>
       </div>
@@ -158,12 +158,12 @@ export default function FeedbackBoard({ weeks, work, candidates, canTriage }) {
       {logging ? <LogFeedback candidates={candidates} onClose={() => setLogging(false)} /> : null}
       {canTriage && !candidates.length ? <p className="note">There is no work currently with a client, so manual feedback intake is disabled. Social comments continue through the weekly review link.</p> : null}
 
-      <div className="filters feedback-filters"><button className={'fchip ' + (project === 'all' ? 'on' : '')} onClick={() => setProject('all')}>All projects</button>
+      <div className="filters"><button className={'fchip ' + (project === 'all' ? 'on' : '')} onClick={() => setProject('all')}>All projects</button>
         {projects.map((p) => <button key={p.projectSlug} className={'fchip ' + (project === p.projectSlug ? 'on' : '')}
           onClick={() => setProject(p.projectSlug)}>{p.client} · {p.projectName}</button>)}</div>
-      <div className="cards feedback-cards">{shown.map((item, n) => <FeedbackCard key={item.kind + (item.workId || item.projectSlug) + (item.feedbackKey || item.key) + n}
+      <div className="cards">{shown.map((item, n) => <FeedbackCard key={item.kind + (item.workId || item.projectSlug) + (item.feedbackKey || item.key) + n}
         item={item} canTriage={canTriage} />)}</div>
-      {!shown.length ? <div className="panel"><div className="empty">No open feedback in this view.</div></div> : null}
+      {!shown.length ? <div className="panel"><div className="pad note">No open feedback in this view.</div></div> : null}
       <p className="note">Revision round numbers and included-round limits are not stored by the current APIs. Existing work feedback is ordered as received; social feedback keeps the source week but does not invent a round count.</p>
     </>
   );

@@ -23,7 +23,7 @@ export default async function Page({ params }) {
     people = await sanity(true).fetch('*[_type=="person" && active==true]|order(name asc){slug,name}');
   } catch (e) { error = e.message; }
 
-  if (error) return <><h1>Request</h1><div className="alert">Sanity did not answer. <code>{error}</code></div></>;
+  if (error) return <><h1>Request</h1><div className="alertbar">Sanity did not answer. <code>{error}</code></div></>;
   if (!request) return <><h1>Not found</h1><p className="lede"><Link href="/requests">Back to requests</Link></p></>;
   const canTriage = ['yes', 'oversight'].includes(can(who, 'triageFeedback')) || ['himanshu', 'aashif'].includes(who);
   return <RequestDetail request={request} projects={projects} people={people} canTriage={canTriage} />;

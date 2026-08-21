@@ -17,26 +17,26 @@ export default function Shell({ groups, who, search, children }) {
   const jobStatus = <><i aria-hidden="true" /><div><b>Jobs healthy</b><span>Digest 08:01</span></div></>;
 
   return (
-    <div className={'shell' + (open ? ' navOpen' : '')}>
-      <div className="scrim" onClick={() => setOpen(false)} />
+    <div className={'shell' + (open ? ' on' : '')}>
+      <div className={'scrim' + (open ? ' on' : '')} onClick={() => setOpen(false)} />
       <aside className="side" onClick={() => setOpen(false)}>
-        <div className="brand"><img src="/cn-logo.png" alt="Creators Network" /></div>
+        <div className="brand"><img className="cnlogo" src="/cn-logo.png" alt="Creators Network" /></div>
         <Nav groups={groups} />
         {canOpenJobs
           ? <Link className="sysbar" href="/jobs">{jobStatus}</Link>
           : <div className="sysbar">{jobStatus}</div>}
       </aside>
-      <div className="main">
+      <div>
         <div className="top">
-          <button className="menuBtn" onClick={() => setOpen(!open)} aria-label="Menu">Menu</button>
+          <button className="btn sm" onClick={() => setOpen(!open)} aria-label="Menu">Menu</button>
           <div className="crumb"><Breadcrumbs index={search.items} /></div>
           <GlobalSearch items={search.items} error={search.error} />
-          <div className="topuser">
+          <div className="whobox">
             <Who how={who.how} name={who.name} role={who.role} />
             <div className="av" title={[who.name, who.role].filter(Boolean).join(', ')}>{initials(who.name)}</div>
           </div>
         </div>
-        <div className="body">{children}</div>
+        <main className="main">{children}</main>
       </div>
     </div>
   );

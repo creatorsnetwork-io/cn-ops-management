@@ -40,37 +40,39 @@ function FlagCard({ row, flag, canWaive, onRefresh }) {
 
   const captions = evidence && (evidence.captions || []).filter((c) => c.has);
   return (
-    <div className="qc-flag-card">
-      <div className={'qc-severity ' + (flag.severity === 'block' ? 'bad' : 'warn')}>{flag.severity === 'block' ? '!!' : '!'}</div>
-      <div className="qc-flag-copy">
-        <b>{flag.message}</b>
-        <div className="sub2">{row.client} · {row.projectName} · week of {dayOf(row.week)} · {flag.label || flag.key}</div>
-        <div className="ref">
-          <div className="rl">Evidence</div>
-          {evidence ? (
-            evidence.missing ? <div className="rc">The current sheet no longer contains this row.</div> : <>
-              <div className="rc">{captions && captions.length
-                ? captions.map((c) => c.channel + ': ' + c.text).join('\n\n')
-                : 'No caption is present on the current row.'}</div>
-              <div className="rm">Sheet row {evidence.sheetRow}. {evidence.type || evidence.channel || 'Post type not set'}.
-                {evidence.creativeLink ? ' Creative file linked.' : ' No creative file linked.'}</div>
-            </>
-          ) : <div className="rc">Load the current row to compare this stored flag with the live sheet.</div>}
+    <div style={{ padding: '13px 15px', borderBottom: '1px solid var(--line2)' }}>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <div className="ty" style={{ background: flag.severity === 'block' ? 'var(--badbg)' : 'var(--warnbg)', color: flag.severity === 'block' ? 'var(--bad)' : 'var(--warn)', width: 40, height: 25, borderRadius: 6, fontSize: 9.5, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{flag.severity === 'block' ? '!!' : '!'}</div>
+        <div style={{ flex: 1, minWidth: 230 }}>
+          <b style={{ fontSize: 13.5 }}>{flag.message}</b>
+          <div className="sub2">{row.client} · {row.projectName} · week of {dayOf(row.week)} · {flag.label || flag.key}</div>
+          <div className="ref">
+            <div className="rl">Evidence</div>
+            {evidence ? (
+              evidence.missing ? <div className="rc">The current sheet no longer contains this row.</div> : <>
+                <div className="rc">{captions && captions.length
+                  ? captions.map((c) => c.channel + ': ' + c.text).join('\n\n')
+                  : 'No caption is present on the current row.'}</div>
+                <div className="rm">Sheet row {evidence.sheetRow}. {evidence.type || evidence.channel || 'Post type not set'}.
+                  {evidence.creativeLink ? ' Creative file linked.' : ' No creative file linked.'}</div>
+              </>
+            ) : <div className="rc">Load the current row to compare this stored flag with the live sheet.</div>}
+          </div>
+          {err ? <div className="note" style={{ color: 'var(--bad)', marginTop: 7 }}>{err}</div> : null}
         </div>
-        {err ? <div className="qc-error">{err}</div> : null}
-      </div>
-      <div className="ac qc-actions">
-        <span className={'tag ' + (flag.severity === 'block' ? 'bad' : 'warn')}>{flag.severity === 'block' ? 'blocking' : 'check'}</span>
-        {!evidence ? <button className="btn sm" disabled={busy === 'evidence'} onClick={loadEvidence}>{busy === 'evidence' ? 'Reading' : 'Load evidence'}</button> : null}
-        <Link className="btn sm" href={'/projects/' + row.projectSlug + '/review?week=' + row.week}>Open the row</Link>
-        {flag.creativeLink ? <a className="btn sm" href={flag.creativeLink} target="_blank" rel="noreferrer">Open creative</a> : null}
-        <button className="btn sm dark" disabled={busy === 'rerun'} onClick={rerun}>{busy === 'rerun' ? 'Checking' : 'Fixed, re-run week'}</button>
-        {canWaive && !ask ? <button className="btn sm" onClick={() => setAsk(true)}>Not required</button> : null}
-        {ask ? <>
-          <button className="btn sm" disabled={busy === 'waive'} onClick={() => waive('once')}>Just this one</button>
-          {evidence && evidence.type ? <button className="btn sm dark" disabled={busy === 'waive'} onClick={() => waive('always')}>Always for {evidence.type}</button> : null}
-          <button className="btn sm" onClick={() => setAsk(false)}>Cancel</button>
-        </> : null}
+        <div className="ac" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          <span className={'tag ' + (flag.severity === 'block' ? 'bad' : 'warn')}>{flag.severity === 'block' ? 'blocking' : 'check'}</span>
+          {!evidence ? <button className="btn sm" disabled={busy === 'evidence'} onClick={loadEvidence}>{busy === 'evidence' ? 'Reading' : 'Load evidence'}</button> : null}
+          <Link className="btn sm" href={'/projects/' + row.projectSlug + '/review?week=' + row.week}>Open the row</Link>
+          {flag.creativeLink ? <a className="btn sm" href={flag.creativeLink} target="_blank" rel="noreferrer">Open creative</a> : null}
+          <button className="btn sm dark" disabled={busy === 'rerun'} onClick={rerun}>{busy === 'rerun' ? 'Checking' : 'Fixed, re-run week'}</button>
+          {canWaive && !ask ? <button className="btn sm" onClick={() => setAsk(true)}>Not required</button> : null}
+          {ask ? <>
+            <button className="btn sm" disabled={busy === 'waive'} onClick={() => waive('once')}>Just this one</button>
+            {evidence && evidence.type ? <button className="btn sm dark" disabled={busy === 'waive'} onClick={() => waive('always')}>Always for {evidence.type}</button> : null}
+            <button className="btn sm" onClick={() => setAsk(false)}>Cancel</button>
+          </> : null}
+        </div>
       </div>
     </div>
   );
@@ -120,9 +122,9 @@ export default function QCDashboard({ initialWeeks, canWaive }) {
         <div><div className="eyebrow">AI checks, human decisions</div><h1>{open.length} open flag{open.length === 1 ? '' : 's'}</h1>
           <p className="lede">Every flag keeps its project, week and source row together. Fixes re-read the current sheet through the existing review flow.</p></div>
         <div className="rowb"><button className="btn ai" disabled={busy || !weeks.length} onClick={rerunAll}>✦ Re-run all</button>
-          {progress ? <span className="note qc-progress">{progress}</span> : null}</div>
+          {progress ? <span className="note" style={{ margin: 0, alignSelf: 'center' }}>{progress}</span> : null}</div>
       </div>
-      {err ? <div className="alert">{err}</div> : null}
+      {err ? <div className="alertbar">{err}</div> : null}
 
       <div className="kpis">
         <div className="kpi"><span className="d r" /><div className="lbl">Open</div><div className="v">{open.length}</div><div className="n">blocking and advisory</div></div>
@@ -139,22 +141,22 @@ export default function QCDashboard({ initialWeeks, canWaive }) {
         {open.length ? open.sort((a, b) => (a.flag.severity === b.flag.severity ? 0 : a.flag.severity === 'block' ? -1 : 1))
           .map(({ row, flag }, n) => <FlagCard key={row.projectSlug + row.week + flag.key + flag.code + n}
             row={row} flag={flag} canWaive={canWaive} onRefresh={() => window.location.reload()} />)
-          : <div className="empty">No open flags in this view.</div>}
+          : <div className="pad note">No open flags in this view.</div>}
       </div>
 
-      <div className="grid2 even qc-registers">
+      <div className="grid2">
         <div className="panel"><header><h2>Cleared after recheck</h2><span className="pill">{cleared.length}</span></header>
-          {cleared.length ? <table className="tbl"><tbody>{cleared.map((row) => <tr key={row.projectSlug + row.week}>
+          {cleared.length ? <table><tbody>{cleared.map((row) => <tr key={row.projectSlug + row.week}>
             <td className="b">{row.projectName}</td><td className="dim">week of {dayOf(row.week)}</td><td><span className="tag ok">clear</span></td>
-          </tr>)}</tbody></table> : <div className="empty">No clear week snapshots yet.</div>}
+          </tr>)}</tbody></table> : <div className="pad note">No clear week snapshots yet.</div>}
         </div>
         <div className="panel"><header><h2>Dismissed as not required</h2><span className="pill">{dismissed.length}</span></header>
-          {dismissed.length ? <table className="tbl"><tbody>{dismissed.map(({ row, flag }, n) => <tr key={row.projectSlug + row.week + flag.key + n}>
+          {dismissed.length ? <table><tbody>{dismissed.map(({ row, flag }, n) => <tr key={row.projectSlug + row.week + flag.key + n}>
             <td className="b">{flag.message}</td><td className="dim">{row.projectName}</td><td><span className="tag mute">{flag.waivedScope === 'rule' ? 'standing rule' : 'just this one'}</span></td>
-          </tr>)}</tbody></table> : <div className="empty">No flags have been marked not required.</div>}
+          </tr>)}</tbody></table> : <div className="pad note">No flags have been marked not required.</div>}
         </div>
       </div>
-      {!initialWeeks.length ? <div className="panel"><div className="empty">Nothing checked yet. Open a project's weekly review and run quality checks.</div></div> : null}
+      {!initialWeeks.length ? <div className="panel"><div className="pad note">Nothing checked yet. Open a project's weekly review and run quality checks.</div></div> : null}
       <p className="note">Cleared flag history is not stored per flag by the current review API. The cleared register therefore shows saved week snapshots with zero flags, and not required flags remain visible in the dismissed register.</p>
     </>
   );

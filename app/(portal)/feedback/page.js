@@ -30,7 +30,7 @@ export default async function Feedback() {
 
   return (
     <>
-      {error ? <div className="alert">Sanity did not answer. <code>{error}</code></div> : null}
+      {error ? <div className="alertbar">Sanity did not answer. <code>{error}</code></div> : null}
       <FeedbackBoard weeks={weeks} work={work} candidates={candidates} canTriage={canTriage} />
     </>
   );

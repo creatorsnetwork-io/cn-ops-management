@@ -88,10 +88,10 @@ export function ClientsBrowse({ who, rows, favs, canAdd }) {
         <div className="panel">
           <header><h2>Add a client</h2><button className="btn sm" onClick={() => setAdding(false)}>Cancel</button></header>
           <div className="pad" style={{ display: 'grid', gap: 11, gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))' }}>
-            <label><div className="lbl">Name</div><input className="inp" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
-            <label><div className="lbl">Short code</div><input className="inp" value={f.code} placeholder="left blank, made from the name" onChange={(e) => setF({ ...f, code: e.target.value })} /></label>
-            <label><div className="lbl">Drive folder link or ID</div><input className="inp mono" value={f.driveFolderId} onChange={(e) => setF({ ...f, driveFolderId: e.target.value })} /></label>
-            <label style={{ gridColumn: '1 / -1' }}><div className="lbl">Anything the team should know</div><input className="inp" value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} /></label>
+            <label><div className="fl">Name</div><input type="text" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
+            <label><div className="fl">Short code</div><input type="text" value={f.code} placeholder="left blank, made from the name" onChange={(e) => setF({ ...f, code: e.target.value })} /></label>
+            <label><div className="fl">Drive folder link or ID</div><input type="text" value={f.driveFolderId} onChange={(e) => setF({ ...f, driveFolderId: e.target.value })} /></label>
+            <label style={{ gridColumn: '1 / -1' }}><div className="fl">Anything the team should know</div><input type="text" value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} /></label>
           </div>
           {err ? <div className="pad" style={{ paddingTop: 0, color: 'var(--bad)', fontSize: 12.5 }}>{err}</div> : null}
           <div style={{ padding: '12px 15px', borderTop: '1px solid var(--line2)' }}>
@@ -118,7 +118,7 @@ export function ClientsBrowse({ who, rows, favs, canAdd }) {
               <h3>{c.name}</h3>
               <div className="cs">{c.typeLabel}</div>
               <div className="metagrid">
-                <div><div className="lbl">Lead</div><div className="v">{c.lead || '—'}</div></div>
+                <div><div className="lbl">Lead</div><div className="v">{c.lead || 'Not set'}</div></div>
                 <div><div className="lbl">Brand brain</div><div className="v"><span className={'tag ' + tagFor(c.brain)}>{c.brain}</span></div></div>
                 <div><div className="lbl">Projects</div><div className="v">{c.projects.length}</div></div>
                 <div><div className="lbl">Setup</div><div className="v">
@@ -134,11 +134,11 @@ export function ClientsBrowse({ who, rows, favs, canAdd }) {
                 <div className="chipsline">{c.projects.slice(0, 4).map((p) => <span className="tchip" key={p.slug}>{SHORT[p.type] || p.type.slice(0, 3).toUpperCase()}</span>)}</div>
               </div>
             </div>))}
-          {list.length === 0 ? <div className="panel"><div className="empty">{favOnly ? 'Nothing starred yet.' : 'No clients.'}</div></div> : null}
+          {list.length === 0 ? <div className="panel"><div className="pad note">{favOnly ? 'Nothing starred yet.' : 'No clients.'}</div></div> : null}
         </div>
       ) : (
         <div className="panel">
-          <table className="tbl">
+          <table>
             <thead><tr><th style={{ width: 34 }} /><th>Client</th><th>Type</th><th>Lead</th><th>Projects</th><th>Brand brain</th><th>Setup</th><th>Health</th><th>Renewal</th></tr></thead>
             <tbody>
               {list.map((c) => (
@@ -146,14 +146,14 @@ export function ClientsBrowse({ who, rows, favs, canAdd }) {
                   <td><Star kind="client" slug={c.slug} on={starred(c.slug)} onDone={onStar} /></td>
                   <td className="b"><Link href={'/clients/' + c.slug}>{c.name}</Link><div className="dim" style={{ fontSize: 12 }}>{c.code}</div></td>
                   <td className="dim">{c.typeLabel}</td>
-                  <td className="dim">{c.lead || '—'}</td>
+                  <td className="dim">{c.lead || 'Not set'}</td>
                   <td className="num">{c.projects.length}</td>
                   <td><span className={'tag ' + tagFor(c.brain)}>{c.brain}</span></td>
                   <td className="dim">{c.setup} of 9</td>
                   <td><span className={'tag ' + tagFor(c.health)}>{c.health}</span></td>
                   <td className="dim">{c.renewal || 'Not set'}</td>
                 </tr>))}
-              {list.length === 0 ? <tr><td colSpan={9} className="empty">{favOnly ? 'Nothing starred yet.' : 'No clients.'}</td></tr> : null}
+              {list.length === 0 ? <tr><td colSpan={9} className="dim">{favOnly ? 'Nothing starred yet.' : 'No clients.'}</td></tr> : null}
             </tbody>
           </table>
         </div>)}
@@ -212,20 +212,20 @@ export function ProjectsBrowse({ who, rows, clients, people, favs, openAdd, init
             <button className="btn sm" onClick={() => setAdding(false)}>Cancel</button>
           </header>
           <div className="pad" style={{ display: 'grid', gap: 11, gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))' }}>
-            <label><div className="lbl">Client</div>
-              <select className="inp" value={f.clientSlug} onChange={(e) => setF({ ...f, clientSlug: e.target.value })}>
+            <label><div className="fl">Client</div>
+              <select className="f" value={f.clientSlug} onChange={(e) => setF({ ...f, clientSlug: e.target.value })}>
                 {clients.map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
               </select></label>
-            <label><div className="lbl">Service</div>
-              <select className="inp" value={f.type} onChange={(e) => setF({ ...f, type: e.target.value })}>
+            <label><div className="fl">Service</div>
+              <select className="f" value={f.type} onChange={(e) => setF({ ...f, type: e.target.value })}>
                 {types.filter((t) => t !== 'all').map((t) => <option key={t} value={t}>{TYPE[t]}</option>)}
               </select></label>
-            <label><div className="lbl">Owner</div>
-              <select className="inp" value={f.owner} onChange={(e) => setF({ ...f, owner: e.target.value })}>
+            <label><div className="fl">Owner</div>
+              <select className="f" value={f.owner} onChange={(e) => setF({ ...f, owner: e.target.value })}>
                 {people.map((p) => <option key={p.slug} value={p.slug}>{p.name}</option>)}
               </select></label>
-            <label style={{ gridColumn: '1 / -1' }}><div className="lbl">Name</div>
-              <input className="inp" value={f.name} placeholder="EGC social retainer" onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
+            <label style={{ gridColumn: '1 / -1' }}><div className="fl">Name</div>
+              <input type="text" value={f.name} placeholder="EGC social retainer" onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
           </div>
           <div className="pad" style={{ paddingTop: 0, fontSize: 12.5, color: 'var(--faint)' }}>
             The cadence is set by the service: social is tracked weekly, SEO monthly, websites and
@@ -267,11 +267,11 @@ export function ProjectsBrowse({ who, rows, clients, people, favs, openAdd, init
                 <Link className="btn sm" href={'/projects/' + p.slug}>Open</Link>
               </div>
             </div>))}
-          {list.length === 0 ? <div className="panel"><div className="empty">Nothing here.</div></div> : null}
+          {list.length === 0 ? <div className="panel"><div className="pad note">Nothing here.</div></div> : null}
         </div>
       ) : (
         <div className="panel">
-          <table className="tbl">
+          <table>
             <thead><tr><th style={{ width: 34 }} /><th>Client</th><th>Project</th><th>Service</th><th>Owner</th><th>Stage</th><th>Approved</th><th>State</th></tr></thead>
             <tbody>
               {list.map((p) => (
@@ -280,12 +280,12 @@ export function ProjectsBrowse({ who, rows, clients, people, favs, openAdd, init
                   <td className="b">{p.client}</td>
                   <td><Link href={'/projects/' + p.slug}>{p.name}</Link></td>
                   <td className="dim">{TYPE[p.type] || p.type}</td>
-                  <td className="dim">{p.owner || '—'}</td>
+                  <td className="dim">{p.owner || 'Not set'}</td>
                   <td className="dim">{p.stage}</td>
                   <td className="dim">{p.approved} / {p.target || '?'}</td>
                   <td><span className={'tag ' + tagFor(p.health)}>{p.health}</span></td>
                 </tr>))}
-              {list.length === 0 ? <tr><td colSpan={8} className="empty">Nothing here.</td></tr> : null}
+              {list.length === 0 ? <tr><td colSpan={8} className="dim">Nothing here.</td></tr> : null}
             </tbody>
           </table>
         </div>)}

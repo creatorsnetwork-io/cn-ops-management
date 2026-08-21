@@ -119,7 +119,7 @@ export default async function Projects({ searchParams }) {
 
   return (
     <>
-      {error ? <div className="alert">Sanity did not answer. <code>{error}</code></div> : null}
+      {error ? <div className="alertbar">Sanity did not answer. <code>{error}</code></div> : null}
       <ProjectsBrowse who={who} rows={rows} clients={clients} people={people} favs={favs}
         openAdd={searchParams?.add === '1'} initialClient={initialClient} />
     </>

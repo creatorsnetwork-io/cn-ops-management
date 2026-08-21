@@ -34,7 +34,7 @@ export default function ProspectDetail({ id }) {
     if (j.ok) { setMode(''); setNote(''); load(); } else setErr(j.error);
   }
 
-  if (!p) return <><Link className="btn sm" href="/pipeline">Back to pipeline</Link>{err ? <div className="alert">{err}</div> : <div className="empty">Loading prospect.</div>}</>;
+  if (!p) return <><Link className="btn sm" href="/pipeline">Back to pipeline</Link>{err ? <div className="alertbar">{err}</div> : <div className="panel"><div className="pad note">Loading prospect.</div></div>}</>;
   const idx = INDEX[p.stage] ?? 0;
   const next = NEXT[p.stage];
 
@@ -51,20 +51,20 @@ export default function ProspectDetail({ id }) {
         </div>
       </div>
 
-      {mode === 'won' || mode === 'lost' ? <div className="panel"><header><h2>{mode === 'won' ? 'Record what they signed' : 'Record why it was lost'}</h2></header><div className="pad"><textarea className="inp" value={note} onChange={(e) => setNote(e.target.value)} /><div className="rowb" style={{ marginTop: 10 }}><button className="btn dark" disabled={busy} onClick={() => post({ action: 'stage', stage: mode, note })}>Save outcome</button><button className="btn" onClick={() => setMode('')}>Cancel</button></div></div></div> : null}
+      {mode === 'won' || mode === 'lost' ? <div className="panel"><header><h2>{mode === 'won' ? 'Record what they signed' : 'Record why it was lost'}</h2></header><div className="pad"><textarea value={note} onChange={(e) => setNote(e.target.value)} /><div className="rowb" style={{ marginTop: 10 }}><button className="btn dark" disabled={busy} onClick={() => post({ action: 'stage', stage: mode, note })}>Save outcome</button><button className="btn" onClick={() => setMode('')}>Cancel</button></div></div></div> : null}
 
-      {err ? <div className="alert">{err}</div> : null}
+      {err ? <div className="alertbar">{err}</div> : null}
 
-      <div className="panel"><header><h2>Stage</h2></header><div className="stepper">{STAGES.map((s, i) => <div className={'st ' + (i < idx ? 'done' : i === idx ? 'now' : '')} key={s}><div className="cir">{i < idx ? '✓' : i + 1}</div><div className="bar" /><div className="lb">{s}</div></div>)}</div><div className="panelNote">First meeting and Quoted are not separate values in the live API, so advancing follows its five stored states.</div></div>
+      <div className="panel"><header><h2>Stage</h2></header><div className="stepper">{STAGES.map((s, i) => <div className={'st ' + (i < idx ? 'done' : i === idx ? 'now' : '')} key={s}><div className="cir">{i < idx ? '✓' : i + 1}</div><div className="bar" /><div className="lb">{s}</div></div>)}</div><div className="pad" style={{ borderTop: '1px solid var(--line2)' }}><p className="note">First meeting and Quoted are not separate values in the live API, so advancing follows its five stored states.</p></div></div>
 
       <div className="grid2">
         <div className="panel"><header><h2>Notes</h2></header><div className="pad">
-          <textarea className="inp" value={edit.notes} disabled={!data?.canEdit} onChange={(e) => setEdit({ ...edit, notes: e.target.value })} placeholder="Prospect notes" />
-          <div className="two-in"><label><div className="k">Next action</div><input className="inp" value={edit.nextStep} disabled={!data?.canEdit} onChange={(e) => setEdit({ ...edit, nextStep: e.target.value })} /></label><label><div className="k">When</div><input className="inp" type="date" value={edit.nextStepDate} disabled={!data?.canEdit} onChange={(e) => setEdit({ ...edit, nextStepDate: e.target.value })} /></label></div>
+          <textarea value={edit.notes} disabled={!data?.canEdit} onChange={(e) => setEdit({ ...edit, notes: e.target.value })} placeholder="Prospect notes" />
+          <div className="two-in"><label><div className="fl">Next action</div><input type="text" value={edit.nextStep} disabled={!data?.canEdit} onChange={(e) => setEdit({ ...edit, nextStep: e.target.value })} /></label><label><div className="fl">When</div><input type="date" value={edit.nextStepDate} disabled={!data?.canEdit} onChange={(e) => setEdit({ ...edit, nextStepDate: e.target.value })} /></label></div>
           <div className="ref"><div className="rl">Current next action</div><div className="rc">{p.nextStep || 'Nothing planned'} · {dayOf(p.nextStepDate)}</div></div>
           <div className="rowb" style={{ marginTop: 12 }}>{data?.canEdit ? <button className="btn sm" disabled={busy} onClick={() => post({ action: 'edit', ...edit })}>Save notes and next action</button> : null}<button className="btn sm" disabled title="No proposal-generation endpoint exists">Generate proposal</button></div>
         </div></div>
-        <div className="panel"><header><h2>What happens if you win</h2></header><table className="tbl"><tbody>
+        <div className="panel"><header><h2>What happens if you win</h2></header><table><tbody>
           <tr><td className="b" style={{ width: 150 }}>Pipeline record</td><td className="dim">Outcome and decision time are stored</td></tr>
           <tr><td className="b">Client record</td><td className="dim">Not automated by the current API</td></tr>
           <tr><td className="b">Project record</td><td className="dim">Not automated by the current API</td></tr>

@@ -46,10 +46,10 @@ export default function ProjectIdeas({ slug, clientDrive, canMark, initialDoc, i
         </div>
         <span className={'badge ' + (cycle.ideasApprovedAt ? 'ok' : '')}>{state}</span>
       </header>
-      {!data && !err ? <div className="empty">Opening {monthName()}.</div> : null}
+      {!data && !err ? <div className="pad note">Opening {monthName()}.</div> : null}
       {err ? <div className="pad" style={{ color: 'var(--bad)', fontSize: 12.5 }}>{err}</div> : null}
       {data ? <>
-        <table className="tbl"><tbody>
+        <table><tbody>
           <tr><td className="dim" style={{ width: 165 }}>Ideas doc</td><td className="b">
             {link ? <a href={link} target="_blank" rel="noreferrer">{doc || 'Open the ideas document'}</a> : (doc || 'Not linked')}
           </td></tr>

@@ -60,7 +60,7 @@ export default async function Page({ params }) {
     }
   } catch (e) { error = e.message; }
 
-  if (error) return <><h1>Client</h1><div className="alert">Sanity did not answer. <code>{error}</code></div></>;
+  if (error) return <><h1>Client</h1><div className="alertbar">Sanity did not answer. <code>{error}</code></div></>;
   if (!c) return <><h1>Not found</h1><p className="lede"><Link href="/clients">Back to clients</Link></p></>;
 
   const onb = evaluate(c);

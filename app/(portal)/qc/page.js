@@ -24,7 +24,7 @@ export default async function QC() {
 
   return (
     <>
-      {error ? <div className="alert">Sanity did not answer. <code>{error}</code></div> : null}
+      {error ? <div className="alertbar">Sanity did not answer. <code>{error}</code></div> : null}
       <QCDashboard initialWeeks={weeks} canWaive={canWaive} />
     </>
   );

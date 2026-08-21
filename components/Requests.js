@@ -49,11 +49,11 @@ function LogForm({ clients, projects, onDone, onCancel }) {
         {forClient.length
           ? chips('Against which project', f.projectSlug, [['', 'Not sure yet']].concat(forClient.map((p) => [p.slug, p.name])), (v) => set('projectSlug', v))
           : null}
-        <label><div className="lbl">What they asked for, in their words</div>
-          <textarea className="inp" style={{ minHeight: 90 }} value={f.what} onChange={(e) => set('what', e.target.value)} /></label>
+        <label><div className="fl">What they asked for, in their words</div>
+          <textarea style={{ minHeight: 90 }} value={f.what} onChange={(e) => set('what', e.target.value)} /></label>
         <div style={{ display: 'grid', gap: 11, gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))' }}>
-          <label><div className="lbl">Who asked</div><input className="inp" value={f.from} placeholder="Name at the client" onChange={(e) => set('from', e.target.value)} /></label>
-          <label><div className="lbl">When they want it</div><input className="inp" type="date" value={f.due} onChange={(e) => set('due', e.target.value)} /></label>
+          <label><div className="fl">Who asked</div><input type="text" value={f.from} placeholder="Name at the client" onChange={(e) => set('from', e.target.value)} /></label>
+          <label><div className="fl">When they want it</div><input type="date" value={f.due} onChange={(e) => set('due', e.target.value)} /></label>
         </div>
       </div>
       {err ? <div className="pad" style={{ paddingTop: 0, color: 'var(--bad)', fontSize: 12.5 }}>{err}</div> : null}
@@ -84,14 +84,14 @@ function Row({ r, projects, people, canTriage, reload }) {
   return (
     <>
       <tr>
-        <td className="mono" style={{ whiteSpace: 'nowrap' }}>{when(r.at)}
+        <td className="dim" style={{ whiteSpace: 'nowrap' }}>{when(r.at)}
           <div style={{ color: 'var(--faint)', fontSize: 12 }}>{CHAN[r.channel]}</div></td>
         <td>{r.clientName}<div style={{ color: 'var(--faint)', fontSize: 12 }}>{r.from || 'unnamed'}</div></td>
         <td>{r.projectName || <span className="tag warn">not linked</span>}</td>
         <td><span className={'tag ' + (r.fault ? 'bad' : 'info')}>{requestType(r)}</span></td>
         <td style={{ whiteSpace: 'pre-wrap' }}>{r.what}
           {r.decision ? <div style={{ color: 'var(--muted)', fontSize: 12.5, marginTop: 5 }}>Decision: {r.decision}</div> : null}</td>
-        <td className="mono">{dayOf(r.due)}<div style={{ color: 'var(--faint)', fontSize: 11 }}>requested date</div></td>
+        <td className="dim">{dayOf(r.due)}<div style={{ color: 'var(--faint)', fontSize: 11 }}>requested date</div></td>
         <td>{r.receivedBy || 'Not assigned'}<div style={{ color: 'var(--faint)', fontSize: 12 }}>intake owner</div></td>
         <td>
           <span className={'tag ' + (r.state === 'accepted' ? 'ok' : r.state === 'declined' ? 'bad' : r.state === 'parked' ? 'warn' : 'mute')}>{r.state}</span>
@@ -116,30 +116,30 @@ function Row({ r, projects, people, canTriage, reload }) {
         <tr><td colSpan={9} style={{ background: '#FCFDFE' }}>
           {mode === 'accept' ? (
             <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))' }}>
-              <label><div className="k">Project</div>
-                <select className="inp" value={pick.projectSlug} onChange={(e) => setPick({ ...pick, projectSlug: e.target.value })}>
+              <label><div className="fl">Project</div>
+                <select className="f" value={pick.projectSlug} onChange={(e) => setPick({ ...pick, projectSlug: e.target.value })}>
                   <option value="">Pick one</option>
                   {forClient.map((p) => <option key={p.slug} value={p.slug}>{p.name}</option>)}
                 </select></label>
-              <label><div className="k">What is it</div>
-                <select className="inp" value={pick.kind} onChange={(e) => setPick({ ...pick, kind: e.target.value })}>
+              <label><div className="fl">What is it</div>
+                <select className="f" value={pick.kind} onChange={(e) => setPick({ ...pick, kind: e.target.value })}>
                   {Object.keys(KINDS).map((k) => <option key={k} value={k}>{KINDS[k].label}</option>)}
                 </select></label>
-              <label><div className="k">Who does it</div>
-                <select className="inp" value={pick.assignee} onChange={(e) => setPick({ ...pick, assignee: e.target.value })}>
+              <label><div className="fl">Who does it</div>
+                <select className="f" value={pick.assignee} onChange={(e) => setPick({ ...pick, assignee: e.target.value })}>
                   <option value="">Nobody yet</option>
                   {people.map((p) => <option key={p.slug} value={p.slug}>{p.name}</option>)}
                 </select></label>
-              <label><div className="k">Due</div><input className="inp" type="date" value={pick.due} onChange={(e) => setPick({ ...pick, due: e.target.value })} /></label>
-              <label style={{ gridColumn: '1 / -1' }}><div className="k">Title</div>
-                <input className="inp" value={pick.title} onChange={(e) => setPick({ ...pick, title: e.target.value })} /></label>
-              <label style={{ gridColumn: '1 / -1' }}><div className="k">What counts as done</div>
-                <input className="inp" value={note} onChange={(e) => setNote(e.target.value)} placeholder="So it cannot creep" /></label>
+              <label><div className="fl">Due</div><input type="date" value={pick.due} onChange={(e) => setPick({ ...pick, due: e.target.value })} /></label>
+              <label style={{ gridColumn: '1 / -1' }}><div className="fl">Title</div>
+                <input type="text" value={pick.title} onChange={(e) => setPick({ ...pick, title: e.target.value })} /></label>
+              <label style={{ gridColumn: '1 / -1' }}><div className="fl">What counts as done</div>
+                <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="So it cannot creep" /></label>
             </div>
           ) : (
             <label style={{ display: 'block' }}>
-              <div className="k">{mode === 'decline' ? 'Why you are saying no' : 'Why it is parked and what unblocks it'}</div>
-              <input className="inp" value={note} onChange={(e) => setNote(e.target.value)} />
+              <div className="fl">{mode === 'decline' ? 'Why you are saying no' : 'Why it is parked and what unblocks it'}</div>
+              <input type="text" value={note} onChange={(e) => setNote(e.target.value)} />
             </label>)}
           {err ? <div style={{ color: 'var(--bad)', fontSize: 12.5, marginTop: 7 }}>{err}</div> : null}
           <div style={{ display: 'flex', gap: 7, marginTop: 10 }}>
@@ -184,29 +184,29 @@ export default function Requests({ clients, projects, people }) {
         ? <LogForm clients={clients} projects={projects} onCancel={() => setAdding(false)} onDone={() => { setAdding(false); load(); }} />
         : null}
 
-      <div className="tabs">
-        <button className={tab === 'open' ? 'on' : ''} onClick={() => setTab('open')}>Not decided ({open.length})</button>
-        <button className={tab === 'scope' ? 'on' : ''} onClick={() => setTab('scope')}>Outside the retainer ({outOfScope.length})</button>
-        <button className={tab === 'closed' ? 'on' : ''} onClick={() => setTab('closed')}>Decided ({closed.length})</button>
+      <div className="tabsrow">
+        <button className={'tb ' + (tab === 'open' ? 'on' : '')} onClick={() => setTab('open')}>Not decided ({open.length})</button>
+        <button className={'tb ' + (tab === 'scope' ? 'on' : '')} onClick={() => setTab('scope')}>Outside the retainer ({outOfScope.length})</button>
+        <button className={'tb ' + (tab === 'closed' ? 'on' : '')} onClick={() => setTab('closed')}>Decided ({closed.length})</button>
       </div>
 
-      <div className="panel" style={{ marginTop: 0, borderTopLeftRadius: 0, borderTopRightRadius: 0 }}>
-        {err ? <div className="row"><span className="dot no" /><div className="t"><b>Could not load requests</b><span className="err">{err}</span></div></div> : null}
-        {!d && !err ? <div className="empty">Loading.</div> : null}
+      <div className="panel">
+        {err ? <div className="alertbar"><span><b>Could not load requests.</b> {err}</span></div> : null}
+        {!d && !err ? <div className="pad note">Loading.</div> : null}
         {d ? (
-          <table className="tbl">
+          <table>
             <thead><tr><th style={{ width: 120 }}>In</th><th style={{ width: 130 }}>Client</th><th style={{ width: 145 }}>Project</th><th style={{ width: 120 }}>Type</th>
               <th>What</th><th style={{ width: 95 }}>Earliest</th><th style={{ width: 110 }}>Owner</th><th style={{ width: 130 }}>State</th><th style={{ width: 250 }} /></tr></thead>
             <tbody>
               {shown.map((r) => <Row key={r._id} r={r} projects={projects} people={people} canTriage={d.canTriage} reload={load} />)}
-              {shown.length === 0 ? <tr><td colSpan={9} className="empty">
+              {shown.length === 0 ? <tr><td colSpan={9} className="dim">
                 {tab === 'open' ? 'Nothing waiting on a decision.' : tab === 'scope' ? 'Nothing logged as outside the retainer.' : 'Nothing decided yet.'}
               </td></tr> : null}
             </tbody>
           </table>) : null}
       </div>
-      <div className="panel request-templates"><header><div><h2>Types with a template</h2><div className="sub2">Repeatable asks start from a known structure.</div></div></header>
-        <table className="tbl"><tbody>
+      <div className="panel"><header><div><h2>Types with a template</h2><div className="sub2">Repeatable asks start from a known structure.</div></div></header>
+        <table><tbody>
           {[['Award nomination','Post structure, caption skeleton, asset list and approval path'],
             ['Event participation','Pre-event, on-ground and post-event set, plus a client footage checklist'],
             ['New joiner','Photo specification, bio questions, caption structure and channel plan'],

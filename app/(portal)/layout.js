@@ -39,7 +39,7 @@ export default async function PortalLayout({ children }) {
       search={{ items: searchItems, error: searchError }}
     >
       {error ? (
-        <div className="alert">
+        <div className="alertbar">
           Cannot read the team from Sanity yet. <code>{error}</code><br />
           Check <a href="/setup">Connections</a>, then run <code>npm run seed</code>.
         </div>

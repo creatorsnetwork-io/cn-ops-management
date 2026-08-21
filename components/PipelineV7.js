@@ -50,18 +50,18 @@ export default function PipelineV7({ people }) {
 
       {adding ? <div className="panel">
         <header><h2>Add a prospect</h2></header>
-        <div className="formGrid">
-          <label><div className="k">Prospect</div><input className="inp" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
-          <label><div className="k">Market</div><select className="inp" value={f.market} onChange={(e) => setF({ ...f, market: e.target.value })}>{['Dubai', 'GCC', 'India', 'Europe', 'Other'].map((x) => <option key={x}>{x}</option>)}</select></label>
-          <label><div className="k">Offer</div><input className="inp" value={f.service} onChange={(e) => setF({ ...f, service: e.target.value })} /></label>
-          <label><div className="k">AED per month</div><input className="inp" value={f.valueAed} onChange={(e) => setF({ ...f, valueAed: e.target.value })} /></label>
-          <label><div className="k">Source</div><input className="inp" value={f.source} onChange={(e) => setF({ ...f, source: e.target.value })} /></label>
-          <label><div className="k">Next action</div><input className="inp" value={f.nextStep} onChange={(e) => setF({ ...f, nextStep: e.target.value })} /></label>
-          <label><div className="k">When</div><input className="inp" type="date" value={f.nextStepDate} onChange={(e) => setF({ ...f, nextStepDate: e.target.value })} /></label>
-          <label><div className="k">Owner</div><select className="inp" value={f.owner} onChange={(e) => setF({ ...f, owner: e.target.value })}><option value="">Me</option>{people.map((p) => <option key={p.slug} value={p.slug}>{p.name}</option>)}</select></label>
+        <div className="pad two-in" style={{ marginTop: 0 }}>
+          <label><div className="fl">Prospect</div><input type="text" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
+          <label><div className="fl">Market</div><select className="f" value={f.market} onChange={(e) => setF({ ...f, market: e.target.value })}>{['Dubai', 'GCC', 'India', 'Europe', 'Other'].map((x) => <option key={x}>{x}</option>)}</select></label>
+          <label><div className="fl">Offer</div><input type="text" value={f.service} onChange={(e) => setF({ ...f, service: e.target.value })} /></label>
+          <label><div className="fl">AED per month</div><input type="text" value={f.valueAed} onChange={(e) => setF({ ...f, valueAed: e.target.value })} /></label>
+          <label><div className="fl">Source</div><input type="text" value={f.source} onChange={(e) => setF({ ...f, source: e.target.value })} /></label>
+          <label><div className="fl">Next action</div><input type="text" value={f.nextStep} onChange={(e) => setF({ ...f, nextStep: e.target.value })} /></label>
+          <label><div className="fl">When</div><input type="date" value={f.nextStepDate} onChange={(e) => setF({ ...f, nextStepDate: e.target.value })} /></label>
+          <label><div className="fl">Owner</div><select className="f" value={f.owner} onChange={(e) => setF({ ...f, owner: e.target.value })}><option value="">Me</option>{people.map((p) => <option key={p.slug} value={p.slug}>{p.name}</option>)}</select></label>
         </div>
-        {err ? <div className="formError">{err}</div> : null}
-        <div className="panelActions"><button className="btn dark" disabled={busy} onClick={add}>{busy ? 'Adding' : 'Add prospect'}</button></div>
+        {err ? <div className="note" style={{ padding: '0 16px 12px', color: 'var(--bad)' }}>{err}</div> : null}
+        <div className="pad" style={{ borderTop: '1px solid var(--line2)' }}><button className="btn dark" disabled={busy} onClick={add}>{busy ? 'Adding' : 'Add prospect'}</button></div>
       </div> : null}
 
       <div className="kpis">
@@ -71,13 +71,13 @@ export default function PipelineV7({ people }) {
         <div className="kpi"><span className="d r" /><div className="lbl">No action 7 days</div><div className="v">{cold.length}</div><div className="n bad">overdue or missing a next date</div></div>
       </div>
 
-      <div className="stageLegend">
-        {['Intro made', 'First meeting', 'Discovery', 'Proposal sent', 'Quoted', 'Won', 'Lost'].map((s) => <span key={s}>{s}</span>)}
+      <div className="stepper" style={{ marginBottom: 13 }}>
+        {['Intro made', 'First meeting', 'Discovery', 'Proposal sent', 'Quoted', 'Won', 'Lost'].map((s, i, all) => <div className="st" key={s}><div className="cir">{i + 1}</div>{i < all.length - 1 ? <div className="bar" /> : null}<div className="lb">{s}</div></div>)}
       </div>
 
       <div className="panel">
         <header><h2>All opportunities</h2><span className="hint">sorted by next action</span></header>
-        <table className="tbl">
+        <table>
           <thead><tr><th>Prospect</th><th>Market</th><th>Offer</th><th className="num">AED per month</th><th>Stage</th><th>Next action</th><th>When</th><th /></tr></thead>
           <tbody>
             {items.map((p) => {
@@ -92,12 +92,12 @@ export default function PipelineV7({ people }) {
                 <td><Link className="btn sm" href={'/pipeline/' + encodeURIComponent(p._id)}>Open</Link></td>
               </tr>;
             })}
-            {items.length === 0 ? <tr><td colSpan={8} className="empty">Nothing in the pipeline yet.</td></tr> : null}
+            {items.length === 0 ? <tr><td colSpan={8} className="dim">Nothing in the pipeline yet.</td></tr> : null}
           </tbody>
         </table>
       </div>
-      {!d && !err ? <div className="empty">Loading the pipeline.</div> : null}
-      {err && !adding ? <div className="alert">{err}</div> : null}
+      {!d && !err ? <div className="panel"><div className="pad note">Loading the pipeline.</div></div> : null}
+      {err && !adding ? <div className="alertbar">{err}</div> : null}
       <p className="note">The live prospect API stores five states. First meeting and Quoted remain visible in the seven-stage operating model but cannot be persisted separately yet.</p>
     </>
   );

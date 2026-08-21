@@ -39,13 +39,13 @@ export default async function Reports() {
         </div>
         <button className="btn dark" disabled title="Monthly report creation is not exposed by the current API">New report</button>
       </div>
-      {error ? <div className="alert">Sanity did not answer. <code>{error}</code></div> : null}
+      {error ? <div className="alertbar">Sanity did not answer. <code>{error}</code></div> : null}
 
       <div className="panel">
         <header>
           <div><h2>This month</h2><div className="sub2">Report links, due dates and report QC are not exposed by the current API.</div></div>
         </header>
-        <table className="tbl">
+        <table>
           <thead><tr><th>Client</th><th>Project</th><th>Month</th><th>Due</th><th>Owner</th><th>Drive link</th><th>State</th><th /></tr></thead>
           <tbody>
             {rows.map((r) => {
@@ -62,16 +62,16 @@ export default async function Reports() {
                   <td><Link className="btn sm" href={'/projects/' + r.slug + '/pack'}>Approval record</Link></td>
                 </tr>);
             })}
-            {rows.length === 0 ? <tr><td colSpan={8} className="empty">No social projects yet.</td></tr> : null}
+            {rows.length === 0 ? <tr><td colSpan={8} className="dim">No social projects yet.</td></tr> : null}
           </tbody>
         </table>
       </div>
 
-      <div className="stat" style={{ marginBottom: 14 }}>
-        <div><b>{t.shipped}</b><span>submitted</span></div>
-        <div><b style={{ color: 'var(--ok)' }}>{t.approved}</b><span>approved</span></div>
-        <div><b style={{ color: t.changes ? 'var(--bad)' : undefined }}>{t.changes}</b><span>changes asked</span></div>
-        <div><b style={{ color: t.waiting ? 'var(--warn)' : undefined }}>{t.waiting}</b><span>waiting on client</span></div>
+      <div className="stats">
+        <div><div className="lbl">Submitted</div><div className="v">{t.shipped}</div></div>
+        <div><div className="lbl">Approved</div><div className="v" style={{ color: 'var(--ok)' }}>{t.approved}</div></div>
+        <div><div className="lbl">Changes asked</div><div className="v" style={{ color: t.changes ? 'var(--bad)' : undefined }}>{t.changes}</div></div>
+        <div><div className="lbl">Waiting on client</div><div className="v" style={{ color: t.waiting ? 'var(--warn)' : undefined }}>{t.waiting}</div></div>
       </div>
 
       <div className="callout">

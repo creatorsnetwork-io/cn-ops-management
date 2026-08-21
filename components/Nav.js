@@ -6,14 +6,14 @@ export default function Nav({ groups }) {
   const path = usePathname();
   const active = (href) => (href === '/' ? path === '/' : path.startsWith(href));
   return (
-    <nav>
+    <nav className="navwrap">
       {groups.map((g) => (
-        <div key={g.g}>
-          <div className="grp">{g.g}</div>
+        <div className="grp" key={g.g}>
+          <div className="lbl">{g.g}</div>
           {g.items.map((i) => (
-            <Link key={i.href} href={i.href} className={'nv' + (active(i.href) ? ' on' : '')}>
+            <Link key={i.href} href={i.href} className={'nav' + (active(i.href) ? ' on' : '')}>
               <span>{i.l}</span>
-              {i.count ? <em className={'navcount' + (i.hot ? ' hot' : '')}>{i.count}</em> : null}
+              {i.count ? <span className={'pill' + (i.hot ? ' hot' : '')}>{i.count}</span> : null}
             </Link>
           ))}
         </div>

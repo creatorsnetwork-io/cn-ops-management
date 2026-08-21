@@ -2,8 +2,8 @@ import Link from 'next/link';
 
 // One place that decides which sub pages a project has, so every screen shows
 // the same set rather than each page listing its own.
-export default function ProjectTabs({ slug, type, on }) {
-  const tabs = [['', 'Overview']];
+export default function ProjectTabs({ slug, type, on, localTabs, activeLocalTab, onLocalTab }) {
+  const tabs = localTabs ? [] : [['', 'Overview']];
   if (type === 'social') {
     tabs.push(['/calendar', 'Calendar tracker']);
     tabs.push(['/review', 'Weekly review']);
@@ -13,10 +13,13 @@ export default function ProjectTabs({ slug, type, on }) {
   tabs.push(['/pack', 'Record of approvals']);
 
   return (
-    <div className="tabs">
+    <div className="tabsrow">
+      {(localTabs || []).map(([key, label]) => (
+        <button key={key} className={'tb ' + (activeLocalTab === key ? 'on' : '')}
+          onClick={() => onLocalTab(key)}>{label}</button>))}
       {tabs.map(([suffix, label]) => (
         <Link key={suffix || 'overview'} href={'/projects/' + slug + suffix}
-          className={(on || '') === suffix ? 'on' : ''}>{label}</Link>))}
+          className={'tb ' + ((on || '') === suffix ? 'on' : '')}>{label}</Link>))}
     </div>
   );
 }

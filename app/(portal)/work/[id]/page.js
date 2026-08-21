@@ -23,14 +23,12 @@ export default async function Page({ params }) {
     leadName = await leadNameOf(who);
   } catch (e) { error = e.message; }
 
-  if (error) return <><h1>Work</h1><div className="alert">Sanity did not answer. <code>{error}</code></div></>;
+  if (error) return <><h1>Work</h1><div className="alertbar">Sanity did not answer. <code>{error}</code></div></>;
   if (!item) return <><h1>Not found</h1><p className="lede">Nothing with that reference. <Link href="/work">Back to work</Link></p></>;
 
   return (
     <>
-      <div className="tabs" style={{ marginTop: 0, marginBottom: 4, border: 'none' }}>
-        <Link href="/work">Back to all work</Link>
-      </div>
+      <Link className="btn sm" href="/work">Back to all work</Link>
       <WorkItem initial={item} who={who} people={people} leadName={leadName} canEdit={['himanshu', 'aashif'].includes(who)} />
     </>
   );

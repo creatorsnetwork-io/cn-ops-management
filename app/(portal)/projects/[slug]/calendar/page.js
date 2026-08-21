@@ -14,7 +14,7 @@ export default async function ProjectCalendar({ params }) {
       `*[_type=="project" && slug==$s][0]{slug,name,type,calendarSources,"client":client->name}`, { s: params.slug });
   } catch (e) { error = e.message; }
 
-  if (error) return <><h1>Calendar tracker</h1><div className="alert">Sanity did not answer. <code>{error}</code></div></>;
+  if (error) return <><h1>Calendar tracker</h1><div className="alertbar">Sanity did not answer. <code>{error}</code></div></>;
   if (!p) return <><h1>Not found</h1><p className="lede"><Link href="/projects">Back to projects</Link></p></>;
 
   return (

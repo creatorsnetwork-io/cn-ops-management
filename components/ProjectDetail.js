@@ -63,16 +63,10 @@ export default function ProjectDetail({ p, activity, perms }) {
         <div><div className="lbl">Client access</div><div className="v">{p.hasClientAccess ? 'Review link live' : 'Not invited'}</div><div className="s">No internal notes exposed</div></div>
       </div>
 
-      <div className="tabsrow">
-        {tabs.map(([key, label]) => <button key={key} className={'tb ' + (tab === key ? 'on' : '')} onClick={() => setTab(key)}>{label}</button>)}
-      </div>
+      <ProjectTabs slug={p.slug} type={p.type} on="" localTabs={tabs}
+        activeLocalTab={tab} onLocalTab={setTab} />
 
       {tab === 'overview' ? <>
-        <div className="projectTools">
-          <div className="lbl">Project tools and records</div>
-          <ProjectTabs slug={p.slug} type={p.type} on="" />
-        </div>
-
         <div className="panel">
           <header><div><h2>Project workflow</h2><div className="sub2">Shared engine, service-specific stages.</div></div><span className="badge ok">Template applied</span></header>
           <div className="stepper">
@@ -93,7 +87,7 @@ export default function ProjectDetail({ p, activity, perms }) {
 
           <div className="panel">
             <header><h2>Attached signals</h2></header>
-            <table className="tbl"><tbody>
+            <table><tbody>
               <tr><td className="b"><Link href="/qc">QC flags</Link></td><td className="num">{p.signals.qc}</td><td className="dim">→</td></tr>
               <tr><td className="b"><Link href="/feedback">Client feedback</Link></td><td className="num">{p.signals.feedback}</td><td className="dim">→</td></tr>
               <tr><td className="b"><Link href="/requests">Open requests</Link></td><td className="num">{p.signals.requests}</td><td className="dim">→</td></tr>
@@ -120,16 +114,16 @@ export default function ProjectDetail({ p, activity, perms }) {
       {tab === 'work' ? <div className="panel">
         <header><div><h2>Work items</h2><div className="sub2">Every item keeps its current state and opens into the live verb and permission flow.</div></div>
           {perms.canCreateWork ? <Link className="btn sm" href="/work">Add work item</Link> : null}</header>
-        <table className="tbl">
+        <table>
           <thead><tr><th>What</th><th>Deliverable</th><th>Kind</th><th>Who</th><th>Due</th><th>State</th><th /></tr></thead>
           <tbody>
             {(p.work || []).map((w) => <tr key={w._id}>
               <td className="b">{w.title}</td><td>{w.deliverable || 'Not assigned'}</td><td>{KINDS[w.kind]?.label || w.kind}</td>
-              <td>{w.assigneeName || 'Nobody'}</td><td className="mono">{w.due || 'Not set'}</td>
+              <td>{w.assigneeName || 'Nobody'}</td><td className="dim">{w.due || 'Not set'}</td>
               <td><span className={'tag ' + (TAG[w.state] || 'mute')}>{LABEL[w.state] || w.state}</span></td>
               <td><Link className="btn sm" href={'/work/' + w._id}>Open</Link></td>
             </tr>)}
-            {(p.work || []).length === 0 ? <tr><td colSpan={7} className="empty">No work items on this project yet.</td></tr> : null}
+            {(p.work || []).length === 0 ? <tr><td colSpan={7} className="dim">No work items on this project yet.</td></tr> : null}
           </tbody>
         </table>
       </div> : null}
@@ -141,7 +135,7 @@ export default function ProjectDetail({ p, activity, perms }) {
             <div className="tm">{when(a.at)}</div><div className="dt"><i /></div>
             <div className="cn"><b>{a.what}</b><span>{a.who || 'system'}{a.detail ? ' · ' + a.detail : ''}</span></div>
           </div>)}
-          {(activity || []).length === 0 ? <div className="empty">Nothing has been logged against this project yet.</div> : null}
+          {(activity || []).length === 0 ? <div className="pad note">Nothing has been logged against this project yet.</div> : null}
         </div>
       </div> : null}
     </>

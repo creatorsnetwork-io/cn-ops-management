@@ -80,13 +80,13 @@ export default function GlobalSearch({ items, error }) {
       </button>
       <div className={'sov' + (open ? ' on' : '')} onMouseDown={(e) => { if (e.target === e.currentTarget) close(); }}>
         <div className="sbox" role="dialog" aria-modal="true" aria-label="Search CN Ops">
-          <div className="searchInputRow">
+          <div className="rowb" style={{ alignItems: 'center', borderBottom: '1px solid var(--line2)', flexWrap: 'nowrap' }}>
             <input ref={input} value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={inputKeys}
               placeholder="Search clients, projects, work, captions, feedback" autoComplete="off" />
-            <button className="searchClose" type="button" onClick={close} aria-label="Close search">Close</button>
+            <button className="btn sm" type="button" onClick={close} aria-label="Close search">Close</button>
           </div>
           <div className="sres" role="listbox" aria-label="Search results">
-            {error ? <div className="searchEmpty">Search could not read Sanity. {error}</div> : null}
+            {error ? <div className="sr"><div className="m" style={{ padding: '4px 0' }}>Search could not read Sanity. {error}</div></div> : null}
             {!error && results.map((r, i) => (
               <Link href={r.href} className={'sr' + (i === active ? ' on' : '')} key={r.kind + r.href + i}
                 role="option" aria-selected={i === active} onMouseEnter={() => setActive(i)} onClick={close}>
@@ -94,9 +94,9 @@ export default function GlobalSearch({ items, error }) {
                 <div className="t">{r.title}<div className="m">{r.meta}</div></div>
               </Link>
             ))}
-            {!error && !results.length ? <div className="searchEmpty">Nothing found</div> : null}
+            {!error && !results.length ? <div className="sr"><div className="m" style={{ padding: '4px 0' }}>Nothing found</div></div> : null}
           </div>
-          <div className="searchHint"><span>↑↓ to move</span><span>Enter to open</span><span>Esc to close</span></div>
+          <div className="note" style={{ display: 'flex', gap: 16, padding: '9px 18px', borderTop: '1px solid var(--line2)' }}><span>↑↓ to move</span><span>Enter to open</span><span>Esc to close</span></div>
         </div>
       </div>
     </>
