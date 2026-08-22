@@ -29,7 +29,6 @@ export default function ProjectDetail({ p, activity, perms, activeTab, who }) {
   const [work, setWork] = useState(p.work || []);
   const [workNote, setWorkNote] = useState({});
   const [workBusy, setWorkBusy] = useState('');
-  const [reassigning, setReassigning] = useState('');
   const stages = STAGES[p.type] || ['Plan', 'Production', 'Client', 'Approved'];
   const stageIndex = p.stage === 'Closed' ? stages.length : Math.max(0, stages.indexOf(p.stage));
   const latestReview = (p.reviews || [])[0];
@@ -53,34 +52,14 @@ export default function ProjectDetail({ p, activity, perms, activeTab, who }) {
       body: JSON.stringify({ action: 'assign', id, assignee: slug }),
     });
     const j = await r.json(); setWorkBusy('');
-    if (j.ok) {
-      setWork((prev) => prev.map((item) => (item._id === id ? j.item : item)));
-      setReassigning('');
-    } else setWorkNote((prev) => ({ ...prev, [id]: j.error }));
-  }
-
-  function runVerb(item, verb) {
-    const extra = {};
-    if (verb.needLink) {
-      const link = window.prompt('Paste the Google Drive link to what you produced.', item.driveLink || '');
-      if (link === null || !link.trim()) return;
-      extra.link = link.trim();
-    }
-    if (verb.needNote) {
-      const note = window.prompt('What needs changing?');
-      if (note === null || !note.trim()) return;
-      extra.note = note.trim();
-    }
-    if (verb.needWho) {
-      const clientName = window.prompt('Who at the client approved it?');
-      if (clientName === null || !clientName.trim()) return;
-      extra.clientName = clientName.trim();
-    }
-    moveWork(item._id, verb.name, extra);
+    if (j.ok) setWork((prev) => prev.map((item) => (item._id === id ? j.item : item)));
+    else setWorkNote((prev) => ({ ...prev, [id]: j.error }));
   }
 
   function WorkRow({ item }) {
     const allowed = verbsFor(item, who).filter((verb) => verb.ok);
+    const direct = allowed.filter((v) => !v.needNote && !v.needWho && (!v.needLink || item.driveLink));
+    const detail = allowed.filter((v) => !direct.some((d) => d.name === v.name));
     const change = canAssign(item, who);
     const people = change.list === null
       ? (p.people || [])
@@ -99,22 +78,26 @@ export default function ProjectDetail({ p, activity, perms, activeTab, who }) {
             {item.firstTime ? ' · first time' : ''}
           </span>
         </div>
-        <div className="mt"><div className="lbl">Owner</div><div className="v">{item.assigneeName || <span className="tag warn">nobody</span>}</div></div>
+        <div className="mt">
+          <div className="lbl">Owner</div>
+          <div className="v">
+            {change.ok ? (
+              <select className="f" value={item.assignee || ''} disabled={workBusy === item._id}
+                onChange={(e) => assignWork(item._id, e.target.value)}>
+                <option value="">Nobody</option>
+                {people.map((person) => <option key={person.slug} value={person.slug}>{person.name}</option>)}
+              </select>
+            ) : item.assigneeName || <span className="tag warn">nobody</span>}
+          </div>
+        </div>
         <div className="mt"><div className="lbl">Due</div><div className="v">{dayOf(item.due) || 'Not set'}</div>{isLate(item) ? <span className="tag bad">late</span> : null}</div>
         <div className="mt"><div className="lbl">State</div><div className="v"><span className={'tag ' + (TAG[item.state] || 'mute')}>{LABEL[item.state] || item.state}</span></div></div>
         <div className="ac">
-          {allowed.map((verb) => (
+          {direct.map((verb) => (
             <button key={verb.name} className={'btn sm ' + (verb.name === 'start' ? '' : 'dark')}
-              disabled={workBusy === item._id} onClick={() => runVerb(item, verb)}>{verb.label}</button>
+              disabled={workBusy === item._id} onClick={() => moveWork(item._id, verb.name, { link: item.driveLink })}>{verb.label}</button>
           ))}
-          {change.ok ? <button className="btn sm" disabled={workBusy === item._id}
-            onClick={() => setReassigning(reassigning === item._id ? '' : item._id)}>Reassign</button> : null}
-          {reassigning === item._id ? (
-            <select className="f" style={{ width: 'auto', minWidth: 140 }} value={item.assignee || ''} disabled={workBusy === item._id}
-              onChange={(e) => assignWork(item._id, e.target.value)}>
-              <option value="">Nobody</option>
-              {people.map((person) => <option key={person.slug} value={person.slug}>{person.name}</option>)}
-            </select>) : null}
+          {detail.map((verb) => <Link key={verb.name} className="btn sm" href={'/work/' + item._id}>{verb.label}</Link>)}
           <Link className="btn sm" href={'/work/' + item._id}>Open item</Link>
         </div>
         {workNote[item._id] ? <div className="note" style={{ width: '100%', paddingLeft: 52, color: 'var(--bad)' }}>{workNote[item._id]}</div> : null}
