@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import Link from 'next/link';
 import CalendarSources from './CalendarSources';
 import Contract from './Contract';
@@ -7,7 +8,7 @@ import Milestones from './Milestones';
 import MonthCycle from './MonthCycle';
 import ProjectIdeas from './ProjectIdeas';
 import ProjectTabs from './ProjectTabs';
-import { KINDS, LABEL, TAG } from '../lib/work';
+import { KINDS, LABEL, TAG, verbsFor, canAssign, isLate } from '../lib/work';
 
 const TYPE = { social: 'Social retainer', website: 'Website', seo: 'SEO', influencer: 'Influencer', video: 'Video', aiVideo: 'AI video', events: 'Event' };
 const STAGES = {
@@ -21,13 +22,105 @@ const STAGES = {
 };
 const pct = (a, b) => (!b ? 0 : Math.min(100, Math.round((a / b) * 100)));
 const when = (t) => (t ? new Date(t).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Time not recorded');
+const dayOf = (d) => (d ? new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : '');
 
-export default function ProjectDetail({ p, activity, perms, activeTab }) {
+export default function ProjectDetail({ p, activity, perms, activeTab, who }) {
   const tab = activeTab;
+  const [work, setWork] = useState(p.work || []);
+  const [workNote, setWorkNote] = useState({});
+  const [workBusy, setWorkBusy] = useState('');
+  const [reassigning, setReassigning] = useState('');
   const stages = STAGES[p.type] || ['Plan', 'Production', 'Client', 'Approved'];
   const stageIndex = p.stage === 'Closed' ? stages.length : Math.max(0, stages.indexOf(p.stage));
   const latestReview = (p.reviews || [])[0];
   const contractUrl = '/projects/' + p.slug + '?tab=deliverables#contract';
+
+  async function moveWork(id, verb, extra) {
+    setWorkBusy(id); setWorkNote((prev) => ({ ...prev, [id]: '' }));
+    const r = await fetch('/api/work', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'move', id, verb, ...(extra || {}) }),
+    });
+    const j = await r.json(); setWorkBusy('');
+    if (j.ok) setWork((prev) => prev.map((item) => (item._id === id ? j.item : item)));
+    else setWorkNote((prev) => ({ ...prev, [id]: j.error }));
+  }
+
+  async function assignWork(id, slug) {
+    setWorkBusy(id); setWorkNote((prev) => ({ ...prev, [id]: '' }));
+    const r = await fetch('/api/work', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'assign', id, assignee: slug }),
+    });
+    const j = await r.json(); setWorkBusy('');
+    if (j.ok) {
+      setWork((prev) => prev.map((item) => (item._id === id ? j.item : item)));
+      setReassigning('');
+    } else setWorkNote((prev) => ({ ...prev, [id]: j.error }));
+  }
+
+  function runVerb(item, verb) {
+    const extra = {};
+    if (verb.needLink) {
+      const link = window.prompt('Paste the Google Drive link to what you produced.', item.driveLink || '');
+      if (link === null || !link.trim()) return;
+      extra.link = link.trim();
+    }
+    if (verb.needNote) {
+      const note = window.prompt('What needs changing?');
+      if (note === null || !note.trim()) return;
+      extra.note = note.trim();
+    }
+    if (verb.needWho) {
+      const clientName = window.prompt('Who at the client approved it?');
+      if (clientName === null || !clientName.trim()) return;
+      extra.clientName = clientName.trim();
+    }
+    moveWork(item._id, verb.name, extra);
+  }
+
+  function WorkRow({ item }) {
+    const allowed = verbsFor(item, who).filter((verb) => verb.ok);
+    const change = canAssign(item, who);
+    const people = change.list === null
+      ? (p.people || [])
+      : (p.people || []).filter((person) => (change.list || []).includes(person.slug));
+    const shortKind = ({ page: 'WEB', article: 'COPY', report: 'RPT', asset: 'ART', film: 'FILM', aivideo: 'AI', campaign: 'CMP', other: 'WORK' })[item.kind] || 'WORK';
+
+    return (
+      <div className="wi">
+        <div className="ty">{shortKind}</div>
+        <div className="tx">
+          <b><Link href={'/work/' + item._id}>{item.title}</Link></b>
+          <span>
+            {KINDS[item.kind]?.label || item.kind}
+            {item.driveLink ? ' · output linked' : ''}
+            {item.deliverable ? ' · counts toward ' + item.deliverable : ''}
+            {item.firstTime ? ' · first time' : ''}
+          </span>
+        </div>
+        <div className="mt"><div className="lbl">Owner</div><div className="v">{item.assigneeName || <span className="tag warn">nobody</span>}</div></div>
+        <div className="mt"><div className="lbl">Due</div><div className="v">{dayOf(item.due) || 'Not set'}</div>{isLate(item) ? <span className="tag bad">late</span> : null}</div>
+        <div className="mt"><div className="lbl">State</div><div className="v"><span className={'tag ' + (TAG[item.state] || 'mute')}>{LABEL[item.state] || item.state}</span></div></div>
+        <div className="ac">
+          {allowed.map((verb) => (
+            <button key={verb.name} className={'btn sm ' + (verb.name === 'start' ? '' : 'dark')}
+              disabled={workBusy === item._id} onClick={() => runVerb(item, verb)}>{verb.label}</button>
+          ))}
+          {change.ok ? <button className="btn sm" disabled={workBusy === item._id}
+            onClick={() => setReassigning(reassigning === item._id ? '' : item._id)}>Reassign</button> : null}
+          {reassigning === item._id ? (
+            <select className="f" style={{ width: 'auto', minWidth: 140 }} value={item.assignee || ''} disabled={workBusy === item._id}
+              onChange={(e) => assignWork(item._id, e.target.value)}>
+              <option value="">Nobody</option>
+              {people.map((person) => <option key={person.slug} value={person.slug}>{person.name}</option>)}
+            </select>) : null}
+          <Link className="btn sm" href={'/work/' + item._id}>Open item</Link>
+        </div>
+        {workNote[item._id] ? <div className="note" style={{ width: '100%', paddingLeft: 52, color: 'var(--bad)' }}>{workNote[item._id]}</div> : null}
+      </div>
+    );
+  }
 
   return (
     <>
@@ -103,18 +196,8 @@ export default function ProjectDetail({ p, activity, perms, activeTab }) {
       {tab === 'work' ? <div className="panel">
         <header><div><h2>Work items</h2><div className="sub2">Every item keeps its current state and opens into the live verb and permission flow.</div></div>
           {perms.canCreateWork ? <Link className="btn sm" href="/work">Add work item</Link> : null}</header>
-        <table>
-          <thead><tr><th>What</th><th>Deliverable</th><th>Kind</th><th>Who</th><th>Due</th><th>State</th><th /></tr></thead>
-          <tbody>
-            {(p.work || []).map((w) => <tr key={w._id}>
-              <td className="b">{w.title}</td><td>{w.deliverable || 'Not assigned'}</td><td>{KINDS[w.kind]?.label || w.kind}</td>
-              <td>{w.assigneeName || 'Nobody'}</td><td className="dim">{w.due || 'Not set'}</td>
-              <td><span className={'tag ' + (TAG[w.state] || 'mute')}>{LABEL[w.state] || w.state}</span></td>
-              <td><Link className="btn sm" href={'/work/' + w._id}>Open</Link></td>
-            </tr>)}
-            {(p.work || []).length === 0 ? <tr><td colSpan={7} className="dim">No work items on this project yet.</td></tr> : null}
-          </tbody>
-        </table>
+        {work.length ? work.map((item) => <WorkRow key={item._id} item={item} />)
+          : <div className="pad note">No work items on this project yet.</div>}
       </div> : null}
 
       {tab === 'activity' ? <div className="panel">
