@@ -14,13 +14,15 @@ export default async function Page({ params }) {
 
   let request = null, projects = [], people = [], error = null;
   try {
-    request = await sanity(true).fetch(`*[_type=="request" && _id==$id][0]{
-      _id,at,receivedBy,from,channel,what,state,inScope,decision,decidedBy,decidedAt,due,
-      "clientSlug":client->slug,"clientName":client->name,
-      "projectSlug":project->slug,"projectName":project->name,
-      "workId":work->_id,"workTitle":work->title,"workState":work->state}`, { id: decodeURIComponent(params.id) });
+    [request, people] = await Promise.all([
+      sanity(true).fetch(`*[_type=="request" && _id==$id][0]{
+        _id,at,receivedBy,from,channel,what,state,inScope,decision,decidedBy,decidedAt,due,
+        "clientSlug":client->slug,"clientName":client->name,
+        "projectSlug":project->slug,"projectName":project->name,
+        "workId":work->_id,"workTitle":work->title,"workState":work->state}`, { id: decodeURIComponent(params.id) }),
+      sanity(true).fetch('*[_type=="person" && active==true]|order(name asc){slug,name}'),
+    ]);
     projects = await sanity(true).fetch('*[_type=="project" && client->slug==$c]|order(name asc){slug,name}', { c: request && request.clientSlug });
-    people = await sanity(true).fetch('*[_type=="person" && active==true]|order(name asc){slug,name}');
   } catch (e) { error = e.message; }
 
   if (error) return <><h1>Request</h1><div className="alertbar">Sanity did not answer. <code>{error}</code></div></>;

@@ -24,10 +24,10 @@ export default async function Page({ params }) {
   try {
     c = await sanity(true).fetch(
       `*[_type=="client" && slug==$s][0]{
-        slug, name, code, note, driveFolderId, logoUrl, contacts, obligations, onbManual,
-        channel, turnaround, renewal, active, clientType, industry, businessType,
+        slug, name, note, driveFolderId, logoUrl, contacts, obligations, onbManual,
+        channel, turnaround, renewal, clientType, industry, businessType,
         "projects": *[_type=="project" && references(^._id)]|order(name asc){
-          slug, name, type, cadence, status, voice, prd, contract, deliverables,
+          slug, name, type, status, voice, prd, contract, deliverables,
           "owner": owner->name, "cals": count(calendarSources[current==true]),
           "late": count(*[_type=="work" && references(^._id)
                 && !(state in ["approved","done"]) && defined(due) && due < $today]),
@@ -43,7 +43,8 @@ export default async function Page({ params }) {
     if (c) {
       const slugs = (c.projects || []).map((p) => p.slug);
       const weeks = await sanity(true).fetch(
-        '*[_type=="weekReview" && projectSlug in $s]{projectSlug, clientDecisions}', { s: slugs });
+        '*[_type=="weekReview" && projectSlug in $s]{projectSlug, clientDecisions, clientToken}', { s: slugs });
+      links = weeks.filter((w) => w.clientToken != null).length;
       const approvedBy = {};
       for (const w of weeks) {
         approvedBy[w.projectSlug] = (approvedBy[w.projectSlug] || 0)
@@ -55,8 +56,6 @@ export default async function Page({ params }) {
         approved: (approvedBy[p.slug] || 0) + (p.workApproved || 0),
         health: projectHealth(p),
       }));
-      links = await sanity(true).fetch(
-        'count(*[_type=="weekReview" && defined(clientToken) && projectSlug in $s])', { s: slugs });
     }
   } catch (e) { error = e.message; }
 

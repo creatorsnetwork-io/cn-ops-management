@@ -23,10 +23,12 @@ export default async function Page() {
 
   let house = { bannedPhrases: [], digestHour: 8 }, projects = [], error = null;
   try {
-    const s = await sanity(true).fetch('*[_id=="settings.house"][0]{bannedPhrases,digestHour,limits}');
+    const [s, rows] = await Promise.all([
+      sanity(true).fetch('*[_id=="settings.house"][0]{bannedPhrases,digestHour,limits}'),
+      sanity(true).fetch('*[_type=="project"]|order(name asc){slug,name,type,voice,extraBanned,"client":client->name}'),
+    ]);
     if (s) house = s;
-    projects = await sanity(true).fetch(
-      '*[_type=="project"]|order(name asc){slug,name,type,voice,extraBanned,"client":client->name}');
+    projects = rows;
   } catch (e) { error = e.message; }
 
   return (

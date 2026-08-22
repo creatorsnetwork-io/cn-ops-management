@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import HomeBoard from '../../components/HomeBoard';
 import Raise from '../../components/Raise';
-import { me } from '../../lib/me';
+import { meSlug } from '../../lib/me';
 import { sanity } from '../../lib/sanity';
 import { thisWeek } from '../../lib/calendar';
 import { leadNameOf, sittingHours } from '../../lib/escalate';
@@ -22,11 +22,10 @@ const OVERVIEW = ['himanshu', 'aashif', 'priyanka', 'nayeem'];
 const when = (t) => (t ? new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '');
 
 export default async function Home() {
-  let who = { slug: 'himanshu', person: { name: 'there' } };
+  const who = meSlug();
   let mineWork = [], mineEsc = [], raisedByMe = [], leadName = null;
   try {
-    who = await me();
-    const s = who.slug;
+    const s = who;
     [mineWork, mineEsc, raisedByMe, leadName] = await Promise.all([
       sanity(true).fetch(`*[_type=="work" && assignee->slug==$s && !(state in ["approved","done"])]|order(due asc)[0...25]{
         _id,title,state,due,"projectName":project->name}`, { s }),
@@ -38,7 +37,7 @@ export default async function Home() {
     ]);
   } catch (e) {}
 
-  const [title, lede] = HEADS[who.slug] || DEFAULT_HEAD;
+  const [title, lede] = HEADS[who] || DEFAULT_HEAD;
   const dateLine = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
   const late = mineWork.filter((w) => isLate(w)).length;
 
@@ -52,7 +51,7 @@ export default async function Home() {
         </div>
         <div className="rowb">
           <Link className="btn" href="/requests">Log a request</Link>
-          {OVERVIEW.includes(who.slug) ? <Link className="btn" href="/calendar">Calendars</Link> : null}
+          {OVERVIEW.includes(who) ? <Link className="btn" href="/calendar">Calendars</Link> : null}
         </div>
       </div>
 
@@ -99,7 +98,7 @@ export default async function Home() {
             </div>))}
         </div>) : null}
 
-      {OVERVIEW.includes(who.slug) ? <HomeBoard startWeek={thisWeek()} /> : null}
+      {OVERVIEW.includes(who) ? <HomeBoard startWeek={thisWeek()} /> : null}
 
       <Raise leadName={leadName} label="I need a decision on something" />
     </>

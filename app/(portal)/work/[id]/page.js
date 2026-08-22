@@ -7,10 +7,9 @@ import { leadNameOf } from '../../../../lib/escalate';
 export const dynamic = 'force-dynamic';
 
 const PROJECTION = `{
-  _id, title, kind, state, due, brief, acceptance, driveLink, docLink, firstTime, needsCraft,
-  createdAt, deliverable, history, feedback, approvedBy, approvedAt, callSheet,
+  _id, title, kind, state, due, brief, acceptance, driveLink, docLink, needsCraft,
+  history, feedback, callSheet,
   "assignee": assignee->slug, "assigneeName": assignee->name,
-  "owner": owner->slug, "ownerName": owner->name,
   "projectSlug": project->slug, "projectName": project->name, "client": project->client->name
 }`;
 
@@ -18,9 +17,11 @@ export default async function Page({ params }) {
   const who = meSlug();
   let item = null, people = [], error = null, leadName = null;
   try {
-    item = await sanity(true).fetch(`*[_id==$id][0]${PROJECTION}`, { id: params.id });
-    people = await sanity(true).fetch('*[_type=="person" && active==true]|order(name asc){slug,name}');
-    leadName = await leadNameOf(who);
+    [item, people, leadName] = await Promise.all([
+      sanity(true).fetch(`*[_id==$id][0]${PROJECTION}`, { id: params.id }),
+      sanity(true).fetch('*[_type=="person" && active==true]|order(name asc){slug,name}'),
+      leadNameOf(who),
+    ]);
   } catch (e) { error = e.message; }
 
   if (error) return <><h1>Work</h1><div className="alertbar">Sanity did not answer. <code>{error}</code></div></>;

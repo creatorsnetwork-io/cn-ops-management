@@ -15,7 +15,7 @@ export default async function QC() {
   try {
     weeks = await sanity(true).fetch(
       `*[_type=="weekReview"]|order(week desc)[0...80]{
-        week, projectSlug, flags, qcAt, qcBy, shipped, "shipAt": shipGate.at,
+        week, projectSlug, flags, qcAt, shipped,
         "projectName": project->name, "client": project->client->name }`);
   } catch (e) { error = e.message; }
 

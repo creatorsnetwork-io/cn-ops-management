@@ -23,13 +23,15 @@ export default async function Page() {
 
   let rows = [], error = null;
   try {
-    const people = await sanity(true).fetch(
-      `*[_type=="person"]|order(active desc, name asc){slug,name,role,email,active,
+    const [people, work] = await Promise.all([
+      sanity(true).fetch(
+        `*[_type=="person"]|order(active desc, name asc){slug,name,role,email,active,
         "reportsToName": reportsTo->name,
-        "projects": *[_type=="project" && owner._ref == ^._id]{slug,name}}`);
-    const work = await sanity(true).fetch(
-      `*[_type=="work" && !(state in ["approved","done"])]{
-        _id,title,state,due,needsCraft,"assignee":assignee->slug,"projectName":project->name}`);
+        "projects": *[_type=="project" && owner._ref == ^._id]{slug,name}}`),
+      sanity(true).fetch(
+        `*[_type=="work" && !(state in ["approved","done"])]{
+        title,state,due,needsCraft,"assignee":assignee->slug}`),
+    ]);
 
     const start = monday();
     const next = new Date(start); next.setUTCDate(next.getUTCDate() + 7);

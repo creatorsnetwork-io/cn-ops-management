@@ -11,32 +11,37 @@ export default async function Links() {
   const who = meSlug();
   if (!pageAllowed(who, '/links')) return <NotYours what="Client links" />;
 
-  let rows = [], error = null;
+  let rows = [], shares = [], error = null;
   try {
-    const raw = await sanity(true).fetch(
-      `*[_type=="weekReview" && defined(clientToken)]|order(week desc)[0...80]{
-        _id, week, projectSlug, clientToken, sharedAt, clientDecisions,
-        "projectName": project->name, "client": project->client->name }`);
-    const activity = await sanity(true).fetch(
-      `*[_type=="activity" && what in ["Created the client link","Reopened the client link"]]|order(at desc){target,who,at}`);
-    const sender = {};
-    for (const a of activity) if (!sender[a.target]) sender[a.target] = a;
-    rows = raw.map((r) => ({
-      ...r,
-      by: sender[r._id]?.who || '',
-      approved: (r.clientDecisions || []).filter((d) => d.decision === 'approved').length,
-      changes: (r.clientDecisions || []).filter((d) => d.decision === 'changes').length,
-      clientDecisions: undefined,
-    }));
-  } catch (e) { error = e.message; }
-
-  let shares = [];
-  try {
-    shares = await sanity(true).fetch(
-      `*[_type=="share" && revoked != true]|order(at desc)[0...80]{
+    const [main, shared] = await Promise.all([
+      Promise.all([
+        sanity(true).fetch(
+          `*[_type=="weekReview" && defined(clientToken)]|order(week desc)[0...80]{
+          _id, week, projectSlug, clientToken, sharedAt, clientDecisions,
+          "projectName": project->name, "client": project->client->name }`),
+        sanity(true).fetch(
+          `*[_type=="activity" && what in ["Created the client link","Reopened the client link"]]|order(at desc){target,who}`),
+      ]).then(([raw, activity]) => ({ raw, activity })).catch((e) => ({ error: e })),
+      sanity(true).fetch(
+        `*[_type=="share" && revoked != true]|order(at desc)[0...80]{
         token, kind, at, by, responses, workId,
-        "title": work->title, "projectName": work->project->name, "client": work->project->client->name}`);
-  } catch (e) {}
+        "title": work->title, "projectName": work->project->name, "client": work->project->client->name}`)
+        .catch(() => []),
+    ]);
+    shares = shared;
+    if (main.error) error = main.error.message;
+    else {
+      const sender = {};
+      for (const a of main.activity) if (!sender[a.target]) sender[a.target] = a;
+      rows = main.raw.map((r) => ({
+        ...r,
+        by: sender[r._id]?.who || '',
+        approved: (r.clientDecisions || []).filter((d) => d.decision === 'approved').length,
+        changes: (r.clientDecisions || []).filter((d) => d.decision === 'changes').length,
+        clientDecisions: undefined,
+      }));
+    }
+  } catch (e) { error = e.message; }
 
   return (
     <>

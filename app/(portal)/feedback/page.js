@@ -13,18 +13,20 @@ export default async function Feedback() {
 
   let weeks = [], work = [], candidates = [], error = null;
   try {
-    weeks = await sanity(true).fetch(
-      `*[_type=="weekReview" && count(clientDecisions[decision=="changes"]) > 0]|order(week desc)[0...40]{
+    [weeks, work, candidates] = await Promise.all([
+      sanity(true).fetch(
+        `*[_type=="weekReview" && count(clientDecisions[decision=="changes"]) > 0]|order(week desc)[0...40]{
         week, projectSlug, clientDecisions, flags,
-        "projectName": project->name, "client": project->client->name, "clientSlug": project->client->slug }`);
-    work = await sanity(true).fetch(
-      `*[_type=="work" && count(feedback) > 0]|order(_createdAt desc)[0...100]{
-        _id, title, kind, state, feedback, driveLink, "projectSlug": project->slug,
+        "projectName": project->name, "client": project->client->name, "clientSlug": project->client->slug }`),
+      sanity(true).fetch(
+        `*[_type=="work" && count(feedback) > 0]|order(_createdAt desc)[0...100]{
+        _id, title, state, feedback, driveLink, "projectSlug": project->slug,
         "projectName": project->name, "client": project->client->name, "clientSlug": project->client->slug,
-        "assigneeName": assignee->name }`);
-    candidates = await sanity(true).fetch(
-      `*[_type=="work" && state=="client"]|order(due asc)[0...100]{
-        _id,title,"projectName":project->name,"client":project->client->name}`);
+        "assigneeName": assignee->name }`),
+      sanity(true).fetch(
+        `*[_type=="work" && state=="client"]|order(due asc)[0...100]{
+        _id,title,"projectName":project->name,"client":project->client->name}`),
+    ]);
   } catch (e) { error = e.message; }
   const canTriage = ['yes', 'oversight'].includes(can(who, 'triageFeedback')) || ['himanshu', 'aashif'].includes(who);
 

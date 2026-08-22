@@ -6,6 +6,60 @@ import { can } from '../lib/perm';
 
 const dayOf = (d) => (d ? new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : '');
 
+function WorkRow({ item, showProject, who, people, note, assign, move }) {
+  const allowed = verbsFor(item, who).filter((v) => v.ok);
+  const direct = allowed.filter((v) => !v.needNote && !v.needWho && (!v.needLink || item.driveLink));
+  const detail = allowed.filter((v) => !direct.some((d) => d.name === v.name));
+  const ch = canAssign(item, who);
+  const list = ch.list === null ? people : people.filter((p) => (ch.list || []).includes(p.slug));
+  const shortKind = ({ page: 'WEB', article: 'COPY', report: 'RPT', asset: 'ART', film: 'FILM', aivideo: 'AI', campaign: 'CMP', other: 'WORK' })[item.kind] || 'WORK';
+
+  return (
+    <div className="wi">
+      <div className="ty">{shortKind}</div>
+      <div className="tx">
+        <b><Link href={'/work/' + item._id}>{item.title}</Link></b>
+        <span>
+          {showProject ? item.client + ' · ' + item.projectName + ' · ' : ''}
+          {KINDS[item.kind]?.label || item.kind}
+          {item.deliverable ? ' · counts toward ' + item.deliverable : ''}
+          {item.firstTime ? ' · first time' : ''}
+        </span>
+      </div>
+      <div className="mt">
+        <div className="lbl">Owner</div>
+        <div className="v">
+          {ch.ok ? (
+            <select className="f" value={item.assignee || ''} onChange={(e) => assign(item._id, e.target.value)}>
+              <option value="">Nobody</option>
+              {list.map((p) => <option key={p.slug} value={p.slug}>{p.name}</option>)}
+            </select>
+          ) : item.assigneeName || <span className="tag warn">nobody</span>}
+        </div>
+      </div>
+      <div className="mt">
+        <div className="lbl">Due</div>
+        <div className="v">{dayOf(item.due) || 'Not set'}</div>
+        {isLate(item) ? <span className="tag bad">late</span> : null}
+      </div>
+      <div className="mt">
+        <div className="lbl">State</div>
+        <div className="v"><span className={'tag ' + (TAG[item.state] || 'mute')}>{LABEL[item.state]}</span></div>
+      </div>
+      <div className="ac">
+        {direct.map((v) => (
+          <button key={v.name} className={'btn sm ' + (v.name === 'start' ? '' : 'dark')}
+            onClick={() => move(item._id, v.name, { link: item.driveLink })}>{v.label}</button>
+        ))}
+        {detail.map((v) => <Link key={v.name} className="btn sm" href={'/work/' + item._id}>{v.label}</Link>)}
+        <Link className="btn sm" href={'/projects/' + item.projectSlug}>Project</Link>
+        {allowed.length === 0 ? <Link className="btn sm" href={'/work/' + item._id}>Open it</Link> : null}
+      </div>
+      {note[item._id] ? <div className="note" style={{ width: '100%', paddingLeft: 52, color: 'var(--bad)' }}>{note[item._id]}</div> : null}
+    </div>
+  );
+}
+
 function NewWork({ projects, people, who, onDone, onCancel }) {
   const allowed = assignableTo(who);
   const canGiveTo = allowed === null ? people : people.filter((p) => allowed.includes(p.slug));
@@ -104,60 +158,6 @@ export default function WorkList({ who, people, projects, canCreate }) {
     return all;
   }, {});
 
-  function WorkRow({ item, showProject }) {
-    const allowed = verbsFor(item, who).filter((v) => v.ok);
-    const direct = allowed.filter((v) => !v.needNote && !v.needWho && (!v.needLink || item.driveLink));
-    const detail = allowed.filter((v) => !direct.some((d) => d.name === v.name));
-    const ch = canAssign(item, who);
-    const list = ch.list === null ? people : people.filter((p) => (ch.list || []).includes(p.slug));
-    const shortKind = ({ page: 'WEB', article: 'COPY', report: 'RPT', asset: 'ART', film: 'FILM', aivideo: 'AI', campaign: 'CMP', other: 'WORK' })[item.kind] || 'WORK';
-
-    return (
-      <div className="wi">
-        <div className="ty">{shortKind}</div>
-        <div className="tx">
-          <b><Link href={'/work/' + item._id}>{item.title}</Link></b>
-          <span>
-            {showProject ? item.client + ' · ' + item.projectName + ' · ' : ''}
-            {KINDS[item.kind]?.label || item.kind}
-            {item.deliverable ? ' · counts toward ' + item.deliverable : ''}
-            {item.firstTime ? ' · first time' : ''}
-          </span>
-        </div>
-        <div className="mt">
-          <div className="lbl">Owner</div>
-          <div className="v">
-            {ch.ok ? (
-              <select className="f" value={item.assignee || ''} onChange={(e) => assign(item._id, e.target.value)}>
-                <option value="">Nobody</option>
-                {list.map((p) => <option key={p.slug} value={p.slug}>{p.name}</option>)}
-              </select>
-            ) : item.assigneeName || <span className="tag warn">nobody</span>}
-          </div>
-        </div>
-        <div className="mt">
-          <div className="lbl">Due</div>
-          <div className="v">{dayOf(item.due) || 'Not set'}</div>
-          {isLate(item) ? <span className="tag bad">late</span> : null}
-        </div>
-        <div className="mt">
-          <div className="lbl">State</div>
-          <div className="v"><span className={'tag ' + (TAG[item.state] || 'mute')}>{LABEL[item.state]}</span></div>
-        </div>
-        <div className="ac">
-          {direct.map((v) => (
-            <button key={v.name} className={'btn sm ' + (v.name === 'start' ? '' : 'dark')}
-              onClick={() => move(item._id, v.name, { link: item.driveLink })}>{v.label}</button>
-          ))}
-          {detail.map((v) => <Link key={v.name} className="btn sm" href={'/work/' + item._id}>{v.label}</Link>)}
-          <Link className="btn sm" href={'/projects/' + item.projectSlug}>Project</Link>
-          {allowed.length === 0 ? <Link className="btn sm" href={'/work/' + item._id}>Open it</Link> : null}
-        </div>
-        {note[item._id] ? <div className="note" style={{ width: '100%', paddingLeft: 52, color: 'var(--bad)' }}>{note[item._id]}</div> : null}
-      </div>
-    );
-  }
-
   return (
     <>
       <div className="head">
@@ -194,7 +194,8 @@ export default function WorkList({ who, people, projects, canCreate }) {
             <div className="panel" key={key}>
               <header><div><h2>{first.client} · {first.projectName}</h2><div className="sub2">{grouped[key].length} active item{grouped[key].length === 1 ? '' : 's'}</div></div>
                 <Link className="btn sm" href={'/projects/' + first.projectSlug}>Open project</Link></header>
-              {grouped[key].map((i) => <WorkRow key={i._id} item={i} showProject={false} />)}
+              {grouped[key].map((i) => <WorkRow key={i._id} item={i} showProject={false}
+                who={who} people={people} note={note} assign={assign} move={move} />)}
             </div>
           );
         }) : <div className="panel"><div className="pad note">Nothing in this view.</div></div>
@@ -203,7 +204,8 @@ export default function WorkList({ who, people, projects, canCreate }) {
         <div className="panel">
           <header><div><h2>{tab === 'mine' ? 'Assigned to you' : 'Waiting on someone else, then you'}</h2>
             <div className="sub2">Each row shows every action your role can take right now.</div></div></header>
-          {shown.length ? shown.map((i) => <WorkRow key={i._id} item={i} showProject />)
+          {shown.length ? shown.map((i) => <WorkRow key={i._id} item={i} showProject
+            who={who} people={people} note={note} assign={assign} move={move} />)
             : <div className="pad note">{tab === 'mine' ? 'Nothing assigned to you.' : 'Nothing waiting on your sign off.'}</div>}
         </div>
       ) : null}
