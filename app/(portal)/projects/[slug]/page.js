@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { sanity } from '../../../../lib/sanity';
-import { me } from '../../../../lib/me';
+import { meSlug } from '../../../../lib/me';
 import { can } from '../../../../lib/perm';
 import ProjectDetail from '../../../../components/ProjectDetail';
 
@@ -58,28 +58,36 @@ function timelineOf(p) {
 }
 
 export default async function Project({ params, searchParams }) {
-  let p = null, activity = [], error = null, who = { slug: 'himanshu' };
+  const who = meSlug();
+  const requestedTab = searchParams && searchParams.tab;
+  const activeTab = ['overview', 'ideas', 'deliverables', 'work', 'activity'].includes(requestedTab)
+    ? requestedTab : 'overview';
+  let p = null, activity = [], error = null;
   try {
-    who = await me();
-    p = await sanity(true).fetch(
-      `*[_type=="project" && slug==$s][0]{
+    const [project, all] = await Promise.all([
+      sanity(true).fetch(
+        `*[_type=="project" && slug==$s][0]{
         _id,slug,name,type,cadence,status,subtitle,term,timeline,stage,ideasDoc,ideasLink,
         calendarSources,deliverables,contract,milestones,prd,voice,
-        "client":client->{name,code,driveFolderId},"owner":owner->{name,slug},
-        "people": *[_type=="person" && active==true]|order(name asc){slug,name},
+        "client":client->{name,code,driveFolderId},"owner":owner->{name},
+        ${activeTab === 'work' ? '"people": *[_type=="person" && active==true]|order(name asc){slug,name},' : ''}
+        ${activeTab === 'activity' ? '"escalations": *[_type=="escalation" && project->slug == ^.slug]{_id},' : ''}
         "workCount": count(*[_type=="work" && references(^._id)]),
         "work": *[_type=="work" && references(^._id)]|order(due asc)[0...200]{
           _id,title,kind,state,due,deliverable,feedback,driveLink,firstTime,needsCraft,
           "assignee":assignee->slug,"assigneeName":assignee->name,"owner":owner->slug},
         "reviews": *[_type=="weekReview" && projectSlug == ^.slug]|order(week desc)[0...100]{
-          _id,week,shipped,clientToken,sharedAt,clientDecisions,flags,items,craftGate,shipGate},
+          _id,week,shipped,clientToken,clientDecisions,flags,items,craftGate,shipGate},
         "cycles": *[_type=="monthCycle" && projectSlug == ^.slug]|order(month desc)[0...24]{
-          _id,month,brainstormAt,ideasSentAt,ideasApprovedAt,ideasDoc,ideasLink,reportLink,shipGate},
-        "requests": *[_type=="request" && project->slug == ^.slug]{_id,state},
-        "escalations": *[_type=="escalation" && project->slug == ^.slug]{_id,resolvedAt}
-      }`, { s: params.slug });
-    if (p) {
-      const all = await sanity(true).fetch('*[_type=="activity"]|order(at desc)[0...500]{_id,at,who,what,detail,target}');
+          _id,brainstormAt,ideasSentAt,ideasApprovedAt,reportLink},
+        "requests": *[_type=="request" && project->slug == ^.slug]{_id,state}
+      }`, { s: params.slug }),
+      activeTab === 'activity'
+        ? sanity(true).fetch('*[_type=="activity"]|order(at desc)[0...500]{_id,at,who,what,detail,target}')
+        : Promise.resolve([]),
+    ]);
+    p = project;
+    if (p && activeTab === 'activity') {
       const targets = new Set([
         p._id,
         ...(p.work || []).map((w) => w._id),
@@ -115,19 +123,15 @@ export default async function Project({ params, searchParams }) {
   };
 
   const perms = {
-    canShare: can(who.slug, 'shareClientLink') === 'yes',
-    canClose: can(who.slug, 'closeProject') === 'yes',
-    canUploadContract: can(who.slug, 'uploadContract') === 'yes',
-    canEditDeliverables: can(who.slug, 'editDeliverables') === 'yes',
-    canEditCalendar: can(who.slug, 'editCalendarSources') === 'yes',
-    canCreateWork: can(who.slug, 'createWork') !== 'no',
-    canAddMilestone: ['himanshu', 'aashif'].includes(who.slug),
-    canMarkIdeas: ['himanshu', 'aashif', 'priyanka'].includes(who.slug),
+    canShare: can(who, 'shareClientLink') === 'yes',
+    canClose: can(who, 'closeProject') === 'yes',
+    canUploadContract: can(who, 'uploadContract') === 'yes',
+    canEditDeliverables: can(who, 'editDeliverables') === 'yes',
+    canEditCalendar: can(who, 'editCalendarSources') === 'yes',
+    canCreateWork: can(who, 'createWork') !== 'no',
+    canAddMilestone: ['himanshu', 'aashif'].includes(who),
+    canMarkIdeas: ['himanshu', 'aashif', 'priyanka'].includes(who),
   };
 
-  const requestedTab = searchParams && searchParams.tab;
-  const activeTab = ['overview', 'ideas', 'deliverables', 'work', 'activity'].includes(requestedTab)
-    ? requestedTab : 'overview';
-
-  return <ProjectDetail p={p} activity={activity} perms={perms} activeTab={activeTab} who={who.slug} />;
+  return <ProjectDetail p={p} activity={activity} perms={perms} activeTab={activeTab} who={who} />;
 }

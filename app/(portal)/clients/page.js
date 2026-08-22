@@ -26,18 +26,22 @@ export default async function Clients() {
   let rows = [], favs = [], error = null;
 
   try {
-    const raw = await sanity(true).fetch(
-      `*[_type=="client" && active != false]|order(name asc){
+    const [raw, person] = await Promise.all([
+      sanity(true).fetch(
+        `*[_type=="client" && active != false]|order(name asc){
         slug, name, code, note, driveFolderId, logoUrl, contacts, onbManual,
-        channel, turnaround, renewal, clientType, industry, businessType,
+        renewal, clientType, industry, businessType,
         "projects": *[_type=="project" && references(^._id)]{
-          slug, name, type, voice, prd, contract, deliverables,
+          slug, type, voice, prd, contract, deliverables,
           "owner": owner->name, "cals": count(calendarSources[current==true])},
         "briefs": count(*[_type=="work" && project->client->slug == ^.slug && defined(brief) && brief != ""]),
         "late": count(*[_type=="work" && project->client->slug == ^.slug
               && !(state in ["approved","done"]) && defined(due) && due < $today]),
         "escalations": count(*[_type=="escalation" && project->client->slug == ^.slug && !defined(resolvedAt)])
-      }`, { today });
+      }`, { today }),
+      sanity(true).fetch('*[_id==$id][0]{favClients}', { id: 'person.' + who }),
+    ]);
+    favs = (person && person.favClients) || [];
 
     rows = raw.map((c) => {
       // The lead is whoever owns most of the work, rather than another field to maintain.
@@ -57,8 +61,6 @@ export default async function Clients() {
       return { ...out, health: healthOf(out) };
     });
 
-    const me = await sanity(true).fetch('*[_id==$id][0]{favClients}', { id: 'person.' + who });
-    favs = (me && me.favClients) || [];
   } catch (e) { error = e.message; }
 
   return (

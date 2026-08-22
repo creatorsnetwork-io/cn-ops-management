@@ -9,8 +9,10 @@ export default async function Work() {
   const who = meSlug();
   let people = [], projects = [], error = null;
   try {
-    people = await sanity(true).fetch('*[_type=="person" && active==true]|order(name asc){slug,name}');
-    projects = await sanity(true).fetch('*[_type=="project"]|order(name asc){slug,name,"client":client->name}');
+    [people, projects] = await Promise.all([
+      sanity(true).fetch('*[_type=="person" && active==true]|order(name asc){slug,name}'),
+      sanity(true).fetch('*[_type=="project"]|order(name asc){slug,name,"client":client->name}'),
+    ]);
   } catch (e) { error = e.message; }
 
   return (

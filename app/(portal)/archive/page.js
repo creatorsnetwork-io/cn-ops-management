@@ -15,25 +15,27 @@ export default async function Archive() {
 
   let projects = [], weeks = [], work = [], requests = [], escalations = [], error = null;
   try {
-    projects = await sanity(true).fetch(
-      `*[_type=="project" && status in ["closed","archived","inactive"]]|order(_updatedAt desc){
-        slug,name,type,status,closedAt,_updatedAt,deliverables,
+    [projects, weeks, work, requests, escalations] = await Promise.all([
+      sanity(true).fetch(
+        `*[_type=="project" && status in ["closed","archived","inactive"]]|order(_updatedAt desc){
+        slug,name,type,closedAt,
         "client":client->name,
         "approved":count(*[_type=="work" && project._ref==^._id && state in ["approved","done"]]),
-        "workTotal":count(*[_type=="work" && project._ref==^._id])}`);
-    weeks = await sanity(true).fetch(
-      `*[_type=="weekReview" && defined(shipGate.at)]|order(week desc)[0...60]{
+        "workTotal":count(*[_type=="work" && project._ref==^._id])}`),
+      sanity(true).fetch(
+        `*[_type=="weekReview" && defined(shipGate.at)]|order(week desc)[0...60]{
         week, projectSlug, shipped, clientDecisions, "shipAt": shipGate.at, "shipBy": shipGate.by,
-        "override": shipGate.override, "projectName": project->name, "client": project->client->name }`);
-    work = await sanity(true).fetch(
-      `*[_type=="work" && state=="done"]|order(_updatedAt desc)[0...80]{
-        _id,title,kind,approvedBy,approvedAt,"projectName":project->name,"assigneeName":assignee->name}`);
-    requests = await sanity(true).fetch(
-      `*[_type=="request" && state != "new"]|order(decidedAt desc)[0...80]{
-        _id,at,what,state,inScope,decision,decidedBy,decidedAt,"clientName":client->name,"workId":work->_id}`);
-    escalations = await sanity(true).fetch(
-      `*[_type=="escalation" && defined(resolvedAt)]|order(resolvedAt desc)[0...80]{
-        _id,at,who,reason,resolution,outcome,resolvedBy,resolvedAt,"ownerName":owner->name,"projectName":project->name}`);
+        "override": shipGate.override, "projectName": project->name, "client": project->client->name }`),
+      sanity(true).fetch(
+        `*[_type=="work" && state=="done"]|order(_updatedAt desc)[0...80]{
+        _id,title,kind,approvedBy,approvedAt,"projectName":project->name,"assigneeName":assignee->name}`),
+      sanity(true).fetch(
+        `*[_type=="request" && state != "new"]|order(decidedAt desc)[0...80]{
+        _id,at,what,state,inScope,decision,"clientName":client->name,"workId":work->_id}`),
+      sanity(true).fetch(
+        `*[_type=="escalation" && defined(resolvedAt)]|order(resolvedAt desc)[0...80]{
+        _id,at,who,reason,resolution,outcome,resolvedBy,resolvedAt,"ownerName":owner->name,"projectName":project->name}`),
+    ]);
   } catch (e) { error = e.message; }
 
   const typeName = { social: 'Social', web: 'Website', seo: 'SEO', campaign: 'Campaign', video: 'Film and video' };

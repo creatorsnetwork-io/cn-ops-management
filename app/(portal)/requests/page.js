@@ -11,9 +11,11 @@ export default async function Page() {
 
   let clients = [], projects = [], people = [], error = null;
   try {
-    clients = await sanity(true).fetch('*[_type=="client" && active==true]|order(name asc){slug,name}');
-    projects = await sanity(true).fetch('*[_type=="project"]|order(name asc){slug,name,"clientSlug":client->slug}');
-    people = await sanity(true).fetch('*[_type=="person" && active==true]|order(name asc){slug,name}');
+    [clients, projects, people] = await Promise.all([
+      sanity(true).fetch('*[_type=="client" && active==true]|order(name asc){slug,name}'),
+      sanity(true).fetch('*[_type=="project"]|order(name asc){slug,name,"clientSlug":client->slug}'),
+      sanity(true).fetch('*[_type=="person" && active==true]|order(name asc){slug,name}'),
+    ]);
   } catch (e) { error = e.message; }
 
   return (

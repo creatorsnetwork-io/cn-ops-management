@@ -17,16 +17,18 @@ export default async function Pack({ params, searchParams }) {
   try {
     p = await sanity(true).fetch(
       `*[_type=="project" && slug==$s][0]{
-        slug,name,type,deliverables,"client":client->{name,code},
+        slug,name,type,deliverables,"client":client->{name},
         "workCount":count(*[_type=="work" && references(^._id)])
       }`, { s: params.slug });
     if (p) {
-      snaps = await sanity(true).fetch(
-        `*[_type=="snapshot" && projectSlug==$s
+      [snaps, roll] = await Promise.all([
+        sanity(true).fetch(
+          `*[_type=="snapshot" && projectSlug==$s
             && ($from == "" || week >= $from) && ($to == "" || week <= $to)]|order(week asc, at asc){
-          _id, at, by, decision, comment, itemKey, week, fingerprint, seen }`,
-        { s: params.slug, from, to });
-      roll = await rollup(params.slug);
+          _id, at, by, decision, comment, itemKey, week, seen }`,
+          { s: params.slug, from, to }),
+        rollup(params.slug),
+      ]);
     }
   } catch (e) { error = e.message; }
 

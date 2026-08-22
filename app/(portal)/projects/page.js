@@ -66,24 +66,30 @@ export default async function Projects({ searchParams }) {
   let rows = [], clients = [], people = [], favs = [], error = null;
 
   try {
-    const raw = await sanity(true).fetch(
-      `*[_type=="project"]|order(client->name asc, name asc){
+    const [raw, weeks, clientRows, peopleRows, person] = await Promise.all([
+      sanity(true).fetch(
+        `*[_type=="project"]|order(client->name asc, name asc){
         slug, name, type, cadence, status, deliverables, milestones,
         subtitle, term, timeline, stage,
-        "client": client->name, "clientSlug": client->slug, "owner": owner->name,
+        "client": client->name, "owner": owner->name,
         "cals": count(calendarSources[current==true]),
-        "work": *[_type=="work" && project->slug == ^.slug]{state,due,deliverable},
+        "work": *[_type=="work" && project->slug == ^.slug]{state,due},
         "reviews": *[_type=="weekReview" && projectSlug == ^.slug]|order(week desc)[0...1]{
-          week,shipped,clientToken,clientDecisions,flags,items,craftGate,shipGate},
+          shipped,clientToken,clientDecisions,flags,items,craftGate,shipGate},
         "cycles": *[_type=="monthCycle" && projectSlug == ^.slug]|order(month desc)[0...1]{
-          month,brainstormAt,ideasSentAt,ideasApprovedAt},
+          brainstormAt,ideasSentAt,ideasApprovedAt},
         "late": count(*[_type=="work" && references(^._id) && !(state in ["approved","done"]) && defined(due) && due < $today]),
         "workApproved": count(*[_type=="work" && references(^._id) && state in ["approved","done"]]),
         "escalations": count(*[_type=="escalation" && references(^._id) && !defined(resolvedAt)])
-      }`, { today });
-
-    const weeks = await sanity(true).fetch(
-      '*[_type=="weekReview"]{projectSlug, clientDecisions}');
+      }`, { today }),
+      sanity(true).fetch('*[_type=="weekReview"]{projectSlug, clientDecisions}'),
+      sanity(true).fetch('*[_type=="client" && active != false]|order(name asc){slug,name}'),
+      sanity(true).fetch('*[_type=="person" && active==true]|order(name asc){slug,name}'),
+      sanity(true).fetch('*[_id==$id][0]{favProjects}', { id: 'person.' + who }),
+    ]);
+    clients = clientRows;
+    people = peopleRows;
+    favs = (person && person.favProjects) || [];
     const approvedByProject = {};
     for (const w of weeks) {
       const n = (w.clientDecisions || []).filter((d) => d.decision === 'approved').length;
@@ -109,10 +115,6 @@ export default async function Projects({ searchParams }) {
       };
     });
 
-    clients = await sanity(true).fetch('*[_type=="client" && active != false]|order(name asc){slug,name}');
-    people = await sanity(true).fetch('*[_type=="person" && active==true]|order(name asc){slug,name}');
-    const me = await sanity(true).fetch('*[_id==$id][0]{favProjects}', { id: 'person.' + who });
-    favs = (me && me.favProjects) || [];
   } catch (e) { error = e.message; }
 
   const initialClient = clients.some((c) => c.slug === searchParams?.client) ? searchParams.client : '';

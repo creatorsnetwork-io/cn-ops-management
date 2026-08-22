@@ -21,13 +21,15 @@ export default async function Jobs() {
 
   let projects = [], activity = [], settings = null, error = null;
   try {
-    projects = await sanity(true).fetch(
-      `*[_type=="project" && type=="social"]|order(name asc){slug,name,
+    [projects, activity, settings] = await Promise.all([
+      sanity(true).fetch(
+        `*[_type=="project" && type=="social"]|order(name asc){
         "calendars": count(calendarSources[current==true]),
         "lastCheck": *[_type=="weekReview" && projectSlug==^.slug && defined(qcAt)]|order(qcAt desc)[0].qcAt,
-        "lastShip": *[_type=="weekReview" && projectSlug==^.slug && defined(shipGate.at)]|order(week desc)[0].shipGate.at}`);
-    activity = await sanity(true).fetch('*[_type=="activity"]|order(at desc)[0...40]{_id,at,who,what,detail,target}');
-    settings = await sanity(true).fetch('*[_id=="settings.house"][0]{digestHour}');
+        "lastShip": *[_type=="weekReview" && projectSlug==^.slug && defined(shipGate.at)]|order(week desc)[0].shipGate.at}`),
+      sanity(true).fetch('*[_type=="activity"]|order(at desc)[0...40]{_id,at,who,what,detail,target}'),
+      sanity(true).fetch('*[_id=="settings.house"][0]{digestHour}'),
+    ]);
   } catch (e) { error = e.message; }
 
   const latest = (field) => projects.map((p) => p[field]).filter(Boolean).sort().slice(-1)[0] || null;

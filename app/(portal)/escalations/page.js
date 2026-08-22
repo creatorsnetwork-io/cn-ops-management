@@ -9,19 +9,24 @@ export const dynamic = 'force-dynamic';
 export default async function Page() {
   if (!pageAllowed(meSlug(), '/escalations')) return <NotYours what="Escalations" />;
 
-  let items = [], error = null;
+  let items = [], people = [], error = null;
   const who = meSlug();
   try {
-    items = await sanity(true).fetch(
-      `*[_type=="escalation"]|order(at desc)[0...200]{_id,at,who,reason,detail,target,
-        resolvedAt,resolvedBy,resolution,outcome,takenAt,takenBy,hops,raisedBy,kind,
+    const [result, roster] = await Promise.all([
+      sanity(true).fetch(
+        `*[_type=="escalation"]|order(at desc)[0...200]{_id,at,who,reason,detail,target,
+        resolvedAt,resolvedBy,resolution,hops,raisedBy,kind,
         "owner":owner->slug,"ownerName":owner->name,
-        "projectName":project->name,"projectSlug":project->slug}`);
-    items = items.map((e) => ({ ...e, week: (String(e.target || '').match(/(\d{4}-\d{2}-\d{2})$/) || [])[1] || null }));
+        "projectName":project->name,"projectSlug":project->slug}`)
+        .then((rows) => ({ rows })).catch((e) => ({ error: e })),
+      sanity(true).fetch('*[_type=="person" && active==true]|order(name asc){slug,name}')
+        .catch(() => []),
+    ]);
+    people = roster;
+    if (result.error) error = result.error.message;
+    else items = result.rows.map((e) => ({ ...e, week: (String(e.target || '').match(/(\d{4}-\d{2}-\d{2})$/) || [])[1] || null }));
   } catch (e) { error = e.message; }
 
-  let people = [];
-  try { people = await sanity(true).fetch('*[_type=="person" && active==true]|order(name asc){slug,name}'); } catch (e) {}
   // Ops see everything. Everyone else sees what they raised or what is theirs to decide.
   const ops = ['himanshu', 'aashif'].includes(who);
   if (!ops) items = items.filter((e) => e.owner === who || e.raisedBy === who);
