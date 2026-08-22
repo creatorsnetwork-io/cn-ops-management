@@ -66,9 +66,11 @@ export default async function Project({ params, searchParams }) {
         _id,slug,name,type,cadence,status,subtitle,term,timeline,stage,ideasDoc,ideasLink,
         calendarSources,deliverables,contract,milestones,prd,voice,
         "client":client->{name,code,driveFolderId},"owner":owner->{name,slug},
+        "people": *[_type=="person" && active==true]|order(name asc){slug,name},
         "workCount": count(*[_type=="work" && references(^._id)]),
         "work": *[_type=="work" && references(^._id)]|order(due asc)[0...200]{
-          _id,title,kind,state,due,deliverable,feedback,"assigneeName":assignee->name},
+          _id,title,kind,state,due,deliverable,feedback,driveLink,firstTime,needsCraft,
+          "assignee":assignee->slug,"assigneeName":assignee->name,"owner":owner->slug},
         "reviews": *[_type=="weekReview" && projectSlug == ^.slug]|order(week desc)[0...100]{
           _id,week,shipped,clientToken,sharedAt,clientDecisions,flags,items,craftGate,shipGate},
         "cycles": *[_type=="monthCycle" && projectSlug == ^.slug]|order(month desc)[0...24]{
@@ -127,5 +129,5 @@ export default async function Project({ params, searchParams }) {
   const activeTab = ['overview', 'ideas', 'deliverables', 'work', 'activity'].includes(requestedTab)
     ? requestedTab : 'overview';
 
-  return <ProjectDetail p={p} activity={activity} perms={perms} activeTab={activeTab} />;
+  return <ProjectDetail p={p} activity={activity} perms={perms} activeTab={activeTab} who={who.slug} />;
 }
