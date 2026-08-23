@@ -18,6 +18,12 @@ const STATE = {
 };
 
 const day = (t) => (t ? new Date(t).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Time not recorded');
+const meetingDay = (t) => {
+  if (!t) return '';
+  const date = new Date(t);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+};
 const toText = (a) => (Array.isArray(a) ? a.filter((x) => x != null).join('\n') : String(a || ''));
 const toList = (s) => String(s || '').split('\n').map((x) => x.trim()).filter(Boolean);
 
@@ -94,7 +100,7 @@ function Recap({ item, canApprove, onDone, say }) {
   );
 }
 
-function Row({ item, clients, projects, rights, onDone, refresh }) {
+function Row({ item, clients, projects, rights, onDone, refresh, marker }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState('');
   const [rowErr, setRowErr] = useState('');
@@ -115,6 +121,7 @@ function Row({ item, clients, projects, rights, onDone, refresh }) {
       if (r.status === 403) refresh();
       return;
     }
+    if (body.action === 'draft') setOpen(true);
     onDone(j.item, done);
   }
 
@@ -136,7 +143,8 @@ function Row({ item, clients, projects, rights, onDone, refresh }) {
         </div>
         <div className="mt">
           <div className="lbl">State</div>
-          <div className="v"><span className={'tag ' + tone}>{label}</span></div>
+          <div className="v"><span className={'tag ' + tone}>{label}</span>
+            {marker ? <span className="tag info" style={{ marginLeft: 6 }}>{marker}</span> : null}</div>
         </div>
         <div className="ac">
           {item.state === 'found' && !item.internal && item.clientSlug
@@ -225,6 +233,9 @@ export default function MeetingNotes() {
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
   const [tab, setTab] = useState('todo');
+  const [range, setRange] = useState('14');
+  const [search, setSearch] = useState('');
+  const [acted, setActed] = useState({});
   const [busy, setBusy] = useState(false);
   const [showFolders, setShowFolders] = useState(false);
 
@@ -237,6 +248,8 @@ export default function MeetingNotes() {
   useEffect(() => { load(); }, []);
 
   function replace(item, said) {
+    if (item.state === 'drafted' || item.state === 'accepted' || item.state === 'rejected')
+      setActed((prev) => ({ ...prev, [item._id]: item.state }));
     setD((prev) => ({ ...prev, notes: prev.notes.map((n) => (n._id === item._id ? item : n)) }));
     setMsg(said || '');
     setErr('');
@@ -269,14 +282,50 @@ export default function MeetingNotes() {
     internal: notes.filter((n) => n.internal).length,
     done: notes.filter((n) => n.state === 'accepted').length,
   };
-  const shown = notes.filter((n) => {
+  const matchesTab = (n) => {
     if (tab === 'todo') return n.state === 'drafted';
     if (tab === 'unread') return n.state === 'found' && !n.internal;
     if (tab === 'internal') return !!n.internal;
     if (tab === 'blocked') return n.state === 'unreadable';
     if (tab === 'done') return n.state === 'accepted' || n.state === 'rejected';
     return true;
+  };
+  const inState = notes.filter((n) => matchesTab(n) || !!acted[n._id]);
+  const firstDay = new Date();
+  firstDay.setHours(0, 0, 0, 0);
+  if (range !== 'all') firstDay.setDate(firstDay.getDate() - Number(range) + 1);
+  const inRange = inState.filter((n) => {
+    if (range === 'all') return true;
+    const at = new Date(n.meetingAt);
+    return !!n.meetingAt && !Number.isNaN(at.getTime()) && at >= firstDay;
   });
+  const needle = search.trim().toLowerCase();
+  const clientNames = Object.fromEntries((d.clients || []).map((c) => [c.slug, c.name]));
+  const shown = inRange.filter((n) => !needle
+    || String(n.title || '').toLowerCase().includes(needle)
+    || String(clientNames[n.clientSlug] || '').toLowerCase().includes(needle));
+  const days = [];
+  const groups = new Map();
+  for (const note of shown) {
+    const key = meetingDay(note.meetingAt);
+    if (!groups.has(key)) {
+      const group = { key, notes: [] };
+      groups.set(key, group);
+      days.push(group);
+    }
+    groups.get(key).notes.push(note);
+  }
+  days.sort((a, b) => (a.key && b.key ? b.key.localeCompare(a.key) : a.key ? -1 : b.key ? 1 : 0));
+
+  const stateName = {
+    todo: 'Waiting for you', unread: 'Not read yet', internal: 'Internal',
+    blocked: 'Cannot open', done: 'Decided', all: 'Everything',
+  }[tab];
+  let empty = '';
+  if (!notes.length) empty = 'Set the folders, then look for new notes.';
+  else if (!inState.length) empty = 'The "' + stateName + '" state filter is hiding every meeting. Try another state.';
+  else if (!inRange.length) empty = 'The last ' + range + ' days filter is hiding every meeting in this state. Widen the date range.';
+  else if (!shown.length) empty = 'The search for "' + search.trim() + '" matches no meeting title or client in this view.';
 
   return (
     <>
@@ -314,11 +363,39 @@ export default function MeetingNotes() {
         ))}
       </div>
 
+      <div className="filters">
+        <div className="sbox" style={{ flex: '1 1 300px', maxWidth: 470, border: '1px solid var(--line)' }}>
+          <input value={search} onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search meeting titles or clients" autoComplete="off" />
+        </div>
+        <select className="f" style={{ width: 'auto' }} value={range}
+          onChange={(e) => setRange(e.target.value)} aria-label="Meeting date range">
+          <option value="14">Last 14 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="all">Everything</option>
+        </select>
+      </div>
+
       {shown.length === 0
-        ? <div className="panel"><div className="pad note">Nothing here. {notes.length === 0 ? 'Set the folders, then look for new notes.' : 'Try another filter.'}</div></div>
-        : shown.map((n) => (
-          <Row key={n._id} item={n} clients={d.clients || []} projects={d.projects || []}
-            rights={d.rights} onDone={replace} refresh={load} />
+        ? <div className="panel"><div className="pad note">{empty}</div></div>
+        : days.map((group) => (
+          <div key={group.key || 'undated'}>
+            <div className="rowb" style={{ alignItems: 'center', margin: '18px 0 9px' }}>
+              <div className="lbl">{group.key
+                ? new Date(group.key + 'T00:00:00').toLocaleDateString('en-GB', {
+                  weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+                }) : 'Meeting day not recorded'}</div>
+              <span className="tag mute">{group.notes.length} meeting{group.notes.length === 1 ? '' : 's'}</span>
+            </div>
+            {group.notes.map((n) => (
+              <Row key={n._id} item={n} clients={d.clients || []} projects={d.projects || []}
+                rights={d.rights} onDone={replace} refresh={load}
+                marker={!matchesTab(n) && acted[n._id]
+                  ? { drafted: 'Just drafted', accepted: 'Just accepted', rejected: 'Just rejected' }[acted[n._id]]
+                  : ''} />
+            ))}
+          </div>
         ))}
     </>
   );
