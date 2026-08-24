@@ -17,6 +17,24 @@ const STATE = {
   unreadable: ['Cannot open', 'bad'],
 };
 
+const KIND_LABEL = {
+  client: 'With the client', internal: 'Internal',
+  vendor: 'Vendor or freelancer', prospect: 'Prospect',
+};
+
+// Older records only carried a true or false internal flag. Read them the same way
+// the server does, so nothing needs migrating.
+const kindOf = (n) => (n.kind && KIND_LABEL[n.kind] ? n.kind : (n.internal ? 'internal' : (n.clientSlug ? 'client' : '')));
+
+function readyToDraft(n) {
+  const k = kindOf(n);
+  if (!k) return 'Say what kind of meeting this was.';
+  if (k === 'client' && !n.clientSlug) return 'Pick the client.';
+  if (k === 'vendor' && !n.vendorId) return 'Pick the vendor or freelancer.';
+  if (k === 'prospect' && !n.prospectId) return 'Pick the prospect.';
+  return '';
+}
+
 const day = (t) => (t ? new Date(t).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Time not recorded');
 const meetingDay = (t) => {
   if (!t) return '';
@@ -62,6 +80,19 @@ function Recap({ item, canApprove, onDone, say }) {
   return (
     <div className="pad" style={{ borderTop: '1px solid var(--line2)' }}>
       {r.summary ? <p className="lede" style={{ marginTop: 0 }}>{r.summary}</p> : null}
+
+      {(r.attendees || []).length ? (
+        <div className="fl">
+          <div className="lbl">In the meeting</div>
+          <div className="chipsline">
+            {r.attendees.map((a, i) => (
+              <span key={i} className={'tag ' + (a.side === 'them' ? 'info' : a.side === 'us' ? 'mute' : '')}>
+                {a.name}{a.side === 'them' ? ' · them' : a.side === 'us' ? ' · us' : ''}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
       {r.empty ? <div className="alertbar">The notes did not contain anything decisive. Accepting this records nothing, which is the honest outcome for a meeting where nothing was settled.</div> : null}
 
       <div className="two-in">
@@ -100,12 +131,15 @@ function Recap({ item, canApprove, onDone, say }) {
   );
 }
 
-function Row({ item, clients, projects, rights, onDone, refresh, marker }) {
+function Row({ item, clients, projects, vendors, prospects, rights, onDone, refresh, marker }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState('');
   const [rowErr, setRowErr] = useState('');
   const [cl, setCl] = useState(item.clientSlug || '');
   const [pr, setPr] = useState(item.projectSlug || '');
+  const [kind, setKind] = useState(kindOf(item));
+  const [vend, setVend] = useState(item.vendorId || '');
+  const [prosp, setProsp] = useState(item.prospectId || '');
   const [label, tone] = STATE[item.state] || ['Unknown', 'mute'];
 
   async function post(body, done) {
@@ -127,16 +161,24 @@ function Row({ item, clients, projects, rights, onDone, refresh, marker }) {
 
   const mine = projects.filter((p) => p.clientSlug === cl);
   const clientName = (clients.find((c) => c.slug === item.clientSlug) || {}).name;
+  const vendName = (vendors.find((v) => v._id === item.vendorId) || {}).name;
+  const prospName = (prospects.find((x) => x._id === item.prospectId) || {}).name;
+  const itemKind = kindOf(item);
+  const missing = readyToDraft(item);
 
   return (
     <div className="panel" style={{ marginBottom: 10 }}>
       <div className="wi">
-        <div className="ty">{item.internal ? 'CN' : (clientName || '?').slice(0, 4).toUpperCase()}</div>
+        <div className="ty">{itemKind === 'internal' ? 'CN' : itemKind === 'vendor' ? 'VEND'
+          : itemKind === 'prospect' ? 'NEW' : (clientName || '?').slice(0, 4).toUpperCase()}</div>
         <div className="tx">
           <b>{item.title}</b>
           <span>
             {day(item.meetingAt)}
-            {item.internal ? ' · internal' : clientName ? ' · ' + clientName : ' · no client yet'}
+            {itemKind ? ' · ' + KIND_LABEL[itemKind] : ' · kind not set'}
+            {clientName ? ' · ' + clientName : ''}
+            {vendName ? ' · ' + vendName : ''}
+            {prospName ? ' · ' + prospName : ''}
             {item.viaShortcut ? ' · someone else hosted' : ''}
             {item.chars ? ' · ' + item.chars.toLocaleString() + ' characters' : ''}
           </span>
@@ -147,10 +189,15 @@ function Row({ item, clients, projects, rights, onDone, refresh, marker }) {
             {marker ? <span className="tag info" style={{ marginLeft: 6 }}>{marker}</span> : null}</div>
         </div>
         <div className="ac">
-          {item.state === 'found' && !item.internal && item.clientSlug
+          {item.state !== 'accepted' && item.state !== 'unreadable' && !missing
             ? <button className="btn sm dark" disabled={!!busy}
-                onClick={() => post({ action: 'draft', id: item._id }, 'Recap drafted. Read it before you accept it.')}>
-                {busy ? 'Reading' : '✦ Draft recap'}</button> : null}
+                onClick={() => post({ action: 'draft', id: item._id },
+                  item.state === 'drafted' ? 'Redrafted from the document again.' : 'Recap drafted. Read it before you accept it.')}>
+                {busy ? 'Reading' : (item.state === 'drafted' || item.state === 'rejected' ? '✦ Draft again' : '✦ Draft recap')}</button> : null}
+          {item.state === 'found' && missing && !item.emails
+            ? <button className="btn sm" disabled={!!busy}
+                onClick={() => post({ action: 'identify', id: item._id }, 'Read the attendees.')}>
+                {busy ? 'Reading' : 'Who was in it?'}</button> : null}
           {item.state === 'unreadable' ? <span className="tag bad">needs a folder share</span> : null}
           {item.state === 'drafted' || item.state === 'accepted' || item.state === 'rejected'
             ? <button className="btn sm" onClick={() => setOpen(!open)}>{open ? 'Hide' : 'Read recap'}</button> : null}
@@ -161,23 +208,58 @@ function Row({ item, clients, projects, rights, onDone, refresh, marker }) {
       {rowErr ? <div className="pad note" style={{ color: 'var(--bad)' }}>{rowErr}</div> : null}
       {item.matchWhy && (item.state === 'found' || item.state === 'unreadable')
         ? <div className="pad note">{item.matchWhy}</div> : null}
+      {missing && item.state === 'found' ? <div className="pad note">{missing}</div> : null}
 
-      {(item.state === 'found' || (item.internal && item.state !== 'accepted')) && rights.canScan ? (
+      {item.state !== 'accepted' && rights.canScan ? (
         <div className="pad" style={{ borderTop: '1px solid var(--line2)' }}>
-          <div className="rowb">
-            <select className="f" style={{ width: 'auto' }} value={cl} onChange={(e) => { setCl(e.target.value); setPr(''); }}>
-              <option value="">{item.internal ? 'Still internal' : 'No client'}</option>
-              {clients.map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
+          <div className="rowb" style={{ flexWrap: 'wrap' }}>
+            <select className="f" style={{ width: 'auto' }} value={kind}
+              onChange={(e) => setKind(e.target.value)} aria-label="Kind of meeting">
+              <option value="">What kind of meeting?</option>
+              {Object.keys(KIND_LABEL).map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
             </select>
-            <select className="f" style={{ width: 'auto' }} value={pr} onChange={(e) => setPr(e.target.value)} disabled={!cl}>
-              <option value="">{cl ? 'Any project' : 'Pick a client first'}</option>
-              {mine.map((p) => <option key={p.slug} value={p.slug}>{p.name}</option>)}
-            </select>
-            <button className="btn sm" disabled={!!busy}
-              onClick={() => post({ action: 'attach', id: item._id, clientSlug: cl, projectSlug: pr, internal: false }, 'Attached.')}>Attach</button>
-            {item.internal ? null : <button className="btn sm" disabled={!!busy}
-              onClick={() => post({ action: 'attach', id: item._id, internal: true }, 'Marked internal. It will not ask again.')}>Not a client meeting</button>}
+
+            {kind === 'vendor' ? (
+              <select className="f" style={{ width: 'auto' }} value={vend} onChange={(e) => setVend(e.target.value)}>
+                <option value="">Which vendor or freelancer?</option>
+                {vendors.map((v) => <option key={v._id} value={v._id}>{v.name}</option>)}
+              </select>) : null}
+
+            {kind === 'prospect' ? (
+              <select className="f" style={{ width: 'auto' }} value={prosp} onChange={(e) => setProsp(e.target.value)}>
+                <option value="">Which prospect?</option>
+                {prospects.map((x) => <option key={x._id} value={x._id}>{x.name}</option>)}
+              </select>) : null}
+
+            {kind && kind !== 'prospect' ? (
+              <>
+                <select className="f" style={{ width: 'auto' }} value={cl}
+                  onChange={(e) => { setCl(e.target.value); setPr(''); }}>
+                  <option value="">{kind === 'client' ? 'Which client?' : 'About no client'}</option>
+                  {clients.map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
+                </select>
+                <select className="f" style={{ width: 'auto' }} value={pr}
+                  onChange={(e) => setPr(e.target.value)} disabled={!cl}>
+                  <option value="">{cl ? 'Any project' : 'Pick a client first'}</option>
+                  {mine.map((p) => <option key={p.slug} value={p.slug}>{p.name}</option>)}
+                </select>
+              </>) : null}
+
+            <button className="btn sm dark" disabled={!!busy || !kind}
+              onClick={() => post({
+                action: 'attach', id: item._id, kind,
+                clientSlug: kind === 'prospect' ? '' : cl,
+                projectSlug: kind === 'prospect' ? '' : pr,
+                vendorId: vend, prospectId: prosp,
+              }, 'Saved.')}>Save</button>
           </div>
+          <p className="note" style={{ marginBottom: 0 }}>
+            {kind === 'internal'
+              ? 'An internal meeting can still be about a client. Leave the client set and its decisions land on that account.'
+              : kind === 'vendor'
+                ? 'Set the client too if this was an outsourced job on their work.'
+                : 'What the meeting was and who it was about are separate. Change either until the recap is accepted.'}
+          </p>
         </div>
       ) : null}
 
@@ -238,6 +320,7 @@ export default function MeetingNotes() {
   const [acted, setActed] = useState({});
   const [busy, setBusy] = useState(false);
   const [showFolders, setShowFolders] = useState(false);
+  const [closedDays, setClosedDays] = useState({});
 
   async function load() {
     const r = await fetch('/api/notes');
@@ -276,16 +359,17 @@ export default function MeetingNotes() {
   const notes = d.notes || [];
   const counts = {
     todo: notes.filter((n) => n.state === 'drafted').length,
-    unread: notes.filter((n) => n.state === 'found' && !n.internal).length,
-    noclient: notes.filter((n) => !n.clientSlug && !n.internal && n.state !== 'unreadable').length,
+    unread: notes.filter((n) => n.state === 'found' && kindOf(n) && kindOf(n) !== 'internal').length,
+    noclient: notes.filter((n) => !kindOf(n) && n.state === 'found').length,
     blocked: notes.filter((n) => n.state === 'unreadable').length,
-    internal: notes.filter((n) => n.internal).length,
+    internal: notes.filter((n) => kindOf(n) === 'internal').length,
     done: notes.filter((n) => n.state === 'accepted').length,
   };
   const matchesTab = (n) => {
     if (tab === 'todo') return n.state === 'drafted';
-    if (tab === 'unread') return n.state === 'found' && !n.internal;
-    if (tab === 'internal') return !!n.internal;
+    if (tab === 'unread') return n.state === 'found' && kindOf(n) && kindOf(n) !== 'internal';
+    if (tab === 'internal') return kindOf(n) === 'internal';
+    if (tab === 'nokind') return !kindOf(n) && n.state === 'found';
     if (tab === 'blocked') return n.state === 'unreadable';
     if (tab === 'done') return n.state === 'accepted' || n.state === 'rejected';
     return true;
@@ -318,8 +402,8 @@ export default function MeetingNotes() {
   days.sort((a, b) => (a.key && b.key ? b.key.localeCompare(a.key) : a.key ? -1 : b.key ? 1 : 0));
 
   const stateName = {
-    todo: 'Waiting for you', unread: 'Not read yet', internal: 'Internal',
-    blocked: 'Cannot open', done: 'Decided', all: 'Everything',
+    todo: 'Waiting for you', unread: 'Not read yet', nokind: 'Kind not set',
+    internal: 'Internal', blocked: 'Cannot open', done: 'Decided', all: 'Everything',
   }[tab];
   let empty = '';
   if (!notes.length) empty = 'Set the folders, then look for new notes.';
@@ -347,8 +431,8 @@ export default function MeetingNotes() {
       <div className="stats">
         <div><div className="lbl">Waiting for you</div><div className="v">{counts.todo}</div><div className="s">Drafted, not signed</div></div>
         <div><div className="lbl">Not read yet</div><div className="v">{counts.unread}</div><div className="s">Found in Drive</div></div>
-        <div><div className="lbl">No client</div><div className="v">{counts.noclient}</div><div className="s">Needs attaching by hand</div></div>
-        <div><div className="lbl">Internal</div><div className="v">{counts.internal}</div><div className="s">Attach one if a client came up</div></div>
+        <div><div className="lbl">Kind not set</div><div className="v">{counts.noclient}</div><div className="s">Needs a person to say what it was</div></div>
+        <div><div className="lbl">Internal</div><div className="v">{counts.internal}</div><div className="s">Can still be about a client</div></div>
         <div><div className="lbl">Cannot open</div><div className="v">{counts.blocked}</div><div className="s">Hosted by someone else</div></div>
         <div><div className="lbl">On the record</div><div className="v">{counts.done}</div><div className="s">Accepted recaps</div></div>
       </div>
@@ -357,8 +441,9 @@ export default function MeetingNotes() {
         onSaved={(f) => { setD({ ...d, folders: f }); setMsg('Folders saved. Look for new notes to read them.'); }} /> : null}
 
       <div className="filters">
-        {[['todo', 'Waiting for you'], ['unread', 'Not read yet'], ['internal', 'Internal'],
-          ['blocked', 'Cannot open'], ['done', 'Decided'], ['all', 'Everything']].map(([k, l]) => (
+        {[['todo', 'Waiting for you'], ['unread', 'Not read yet'], ['nokind', 'Kind not set'],
+          ['internal', 'Internal'], ['blocked', 'Cannot open'], ['done', 'Decided'],
+          ['all', 'Everything']].map(([k, l]) => (
           <button key={k} className={'fchip ' + (tab === k ? 'on' : '')} onClick={() => setTab(k)}>{l}</button>
         ))}
       </div>
@@ -379,24 +464,30 @@ export default function MeetingNotes() {
 
       {shown.length === 0
         ? <div className="panel"><div className="pad note">{empty}</div></div>
-        : days.map((group) => (
-          <div key={group.key || 'undated'}>
-            <div className="rowb" style={{ alignItems: 'center', margin: '18px 0 9px' }}>
-              <div className="lbl">{group.key
+        : days.map((group) => {
+          const gkey = group.key || 'undated';
+          const closed = !!closedDays[gkey];
+          return (
+          <div key={gkey}>
+            <div className="rowb" style={{ alignItems: 'center', margin: '18px 0 9px', cursor: 'pointer' }}
+              onClick={() => setClosedDays((prev) => ({ ...prev, [gkey]: !prev[gkey] }))}>
+              <div className="lbl">{(closed ? '▸ ' : '▾ ') + (group.key
                 ? new Date(group.key + 'T00:00:00').toLocaleDateString('en-GB', {
                   weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-                }) : 'Meeting day not recorded'}</div>
+                }) : 'Meeting day not recorded')}</div>
               <span className="tag mute">{group.notes.length} meeting{group.notes.length === 1 ? '' : 's'}</span>
             </div>
-            {group.notes.map((n) => (
+            {closed ? null : group.notes.map((n) => (
               <Row key={n._id} item={n} clients={d.clients || []} projects={d.projects || []}
+                vendors={d.vendors || []} prospects={d.prospects || []}
                 rights={d.rights} onDone={replace} refresh={load}
                 marker={!matchesTab(n) && acted[n._id]
                   ? { drafted: 'Just drafted', accepted: 'Just accepted', rejected: 'Just rejected' }[acted[n._id]]
                   : ''} />
             ))}
           </div>
-        ))}
+          );
+        })}
     </>
   );
 }

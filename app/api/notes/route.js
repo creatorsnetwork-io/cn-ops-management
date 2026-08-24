@@ -3,7 +3,8 @@ import { meSlug } from '../../../lib/me';
 import { can } from '../../../lib/perm';
 import { log } from '../../../lib/week';
 import { forgetDoc } from '../../../lib/sheetcache';
-import { noteFolders, scanFolder, docText, matchMeeting, recapFrom, proposalsFrom } from '../../../lib/notes';
+import { noteFolders, scanFolder, docText, matchMeeting, recapFrom, proposalsFrom,
+  KINDS, kindOf, readyToDraft, emailsIn, suggestFrom } from '../../../lib/notes';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -25,16 +26,22 @@ export async function GET() {
   const who = meSlug();
   const c = sanity(true);
   try {
-    const [notes, folders, clients, projects] = await Promise.all([
-      c.fetch(`*[_type=="meetingNote"]|order(meetingAt desc)[0...120]{
-        _id, driveId, title, meetingAt, viaShortcut, clientSlug, projectSlug, internal, matchWhy,
+    const [notes, folders, clients, projects, vendors, prospects] = await Promise.all([
+      c.fetch(`*[_type=="meetingNote"]|order(meetingAt desc)[0...500]{
+        _id, driveId, title, meetingAt, viaShortcut, chars,
+        kind, clientSlug, projectSlug, vendorId, prospectId, internal, matchWhy, emails,
         state, recap, proposals, decidedBy, decidedAt, note }`),
       noteFolders(),
       c.fetch('*[_type=="client"]|order(name asc){slug,name,code}'),
       c.fetch('*[_type=="project" && status!="closed"]|order(name asc){slug,name,"clientSlug":client->slug}'),
+      c.fetch('*[_type=="vendor" && active==true]|order(name asc){_id,name,kind}'),
+      c.fetch('*[_type=="prospect" && !defined(decidedAt)]|order(at desc)[0...100]{_id,name,stage}'),
     ]);
     return Response.json({
-      ok: true, who, notes: notes || [], folders, clients: clients || [], projects: projects || [],
+      ok: true, who, notes: notes || [], folders,
+      clients: clients || [], projects: projects || [],
+      vendors: vendors || [], prospects: prospects || [],
+      kinds: KINDS,
       rights: {
         canApprove: softYes(can(who, 'approveRecap')),
         canScan: softYes(can(who, 'settings')),
@@ -93,6 +100,7 @@ export async function POST(req) {
             driveId: it.driveId, title: it.title, meetingAt: it.meetingAt,
             viaShortcut: !!it.viaShortcut, owner: f.person || '',
             clientSlug: m.clientSlug, projectSlug: m.projectSlug,
+            kind: m.internal ? 'internal' : (m.clientSlug ? 'client' : ''),
             internal: m.internal,
             matchWhy: it.readable ? m.why : it.blocked,
             state: it.readable ? 'found' : 'unreadable', foundAt: now,
@@ -111,10 +119,10 @@ export async function POST(req) {
     if (b.action === 'draft') {
       const n = await c.fetch('*[_id==$id][0]', { id: b.id });
       if (!n) return Response.json({ ok: false, error: 'That note is no longer here.' }, { status: 404 });
-      if (n.internal)
-        return Response.json({ ok: false, error: 'That is an internal meeting. Attach it to a client first if you want a recap.' }, { status: 400 });
-      if (!n.clientSlug)
-        return Response.json({ ok: false, error: 'Pick the client first, otherwise the recap has no voice to read against.' }, { status: 400 });
+      if (n.state === 'accepted')
+        return Response.json({ ok: false, error: 'That recap is already accepted. Nothing further can rewrite it.' }, { status: 400 });
+      const ready = readyToDraft(n);
+      if (!ready.ok) return Response.json({ ok: false, error: ready.why }, { status: 400 });
 
       let text = '';
       try { text = await docText(n.driveId); }
@@ -123,13 +131,14 @@ export async function POST(req) {
         return Response.json({ ok: false, error: 'The portal cannot open that document. Whoever hosted the meeting still needs to share their Google Meet folder.' }, { status: 403 });
       }
 
-      const client = await c.fetch('*[_type=="client" && slug==$s][0]{name}', { s: n.clientSlug });
+      const client = n.clientSlug
+        ? await c.fetch('*[_type=="client" && slug==$s][0]{name}', { s: n.clientSlug }) : null;
       const recap = await recapFrom(text, client && client.name);
 
       await c.patch(n._id).set({
         recap, proposals: proposalsFrom(recap),
         state: 'drafted', draftedBy: who, draftedAt: now,
-        chars: text.length,
+        chars: text.length, emails: emailsIn(text),
       }).commit();
       await log(who, 'Drafted a meeting recap', n._id, n.title);
       return Response.json({ ok: true, item: await c.fetch('*[_id==$id][0]', { id: n._id }), empty: recap.empty });
@@ -139,12 +148,50 @@ export async function POST(req) {
     if (b.action === 'attach') {
       const n = await c.fetch('*[_id==$id][0]{_id,state}', { id: b.id });
       if (!n) return Response.json({ ok: false, error: 'That note is no longer here.' }, { status: 404 });
-      await c.patch(n._id).set({
-        clientSlug: b.clientSlug || '', projectSlug: b.projectSlug || '',
-        internal: !!b.internal,
-        matchWhy: b.internal ? 'Marked internal by ' + who : 'Set by ' + who,
-      }).commit();
+      if (n.state === 'accepted')
+        return Response.json({ ok: false, error: 'That recap is accepted, so what it is about is settled. Reject it first if it was filed wrongly.' }, { status: 400 });
+
+      const kind = KINDS[b.kind] ? b.kind : '';
+      // A meeting of any kind can still concern a client. An internal call about
+      // STCH keeps STCH, which is the whole point of splitting these two fields.
+      const patch = {
+        kind,
+        clientSlug: String(b.clientSlug || ''),
+        projectSlug: String(b.projectSlug || ''),
+        vendorId: kind === 'vendor' ? String(b.vendorId || '') : '',
+        prospectId: kind === 'prospect' ? String(b.prospectId || '') : '',
+        internal: kind === 'internal',
+        matchWhy: 'Set by ' + who + '.',
+      };
+      if (patch.projectSlug && !patch.clientSlug) patch.projectSlug = '';
+      await c.patch(n._id).set(patch).commit();
       return Response.json({ ok: true, item: await c.fetch('*[_id==$id][0]', { id: n._id }) });
+    }
+
+    // Read only the attendee list and say who this meeting looks like it was with.
+    // Cheaper than a full recap and it works before anything is attached.
+    if (b.action === 'identify') {
+      const n = await c.fetch('*[_id==$id][0]{_id,driveId,title}', { id: b.id });
+      if (!n) return Response.json({ ok: false, error: 'That note is no longer here.' }, { status: 404 });
+
+      let text = '';
+      try { text = await docText(n.driveId); }
+      catch (e) {
+        await c.patch(n._id).set({ state: 'unreadable', matchWhy: 'Drive refused: ' + e.message }).commit();
+        return Response.json({ ok: false, error: 'The portal cannot open that document yet. Whoever hosted the meeting still needs to share their Google Meet folder.' }, { status: 403 });
+      }
+
+      const emails = emailsIn(text);
+      const [clients, prospects] = await Promise.all([
+        c.fetch('*[_type=="client"]{slug,name,contacts}'),
+        c.fetch('*[_type=="prospect" && !defined(decidedAt)]{_id,name}'),
+      ]);
+      const guess = suggestFrom(emails, clients || [], prospects || []);
+      await c.patch(n._id).set({ emails, matchWhy: guess.why }).commit();
+      return Response.json({
+        ok: true, emails, suggestion: guess,
+        item: await c.fetch('*[_id==$id][0]', { id: n._id }),
+      });
     }
 
     // A person accepts the recap. This is the only step that creates a decision

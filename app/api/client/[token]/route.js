@@ -8,7 +8,7 @@ export const maxDuration = 120;
 async function findReview(token) {
   return sanity(true).fetch(
     `*[_type=="weekReview" && clientToken==$t][0]{_id,projectSlug,week,shipGate,clientDecisions,
-      "project":project->{name,"client":client->name}}`, { t: token });
+      "project":project->{name,"client":client->name,"clientLogo":client->logoUrl}}`, { t: token });
 }
 
 // Only what a client should see. No internal notes, no flags, no gate names.
@@ -34,7 +34,7 @@ export async function GET(req, { params }) {
   for (const d of r.clientDecisions || []) byKey[d.key] = d;
 
   return Response.json({
-    ok: true, client: r.project?.client, project: r.project?.name, week: r.week,
+    ok: true, client: r.project?.client, clientLogo: r.project?.clientLogo || '', project: r.project?.name, week: r.week,
     items: w.items.map((i) => publicItem(i, byKey[i.key])),
   });
 }

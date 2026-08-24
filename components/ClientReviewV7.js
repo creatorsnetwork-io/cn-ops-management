@@ -59,14 +59,18 @@ export default function ClientReviewV7({ token }) {
   return (
     <div className="pshell">
       <aside className="pside">
-        <div className="brand"><img src="/cn-logo.png" alt="Creators Network" /></div>
+        <div className="brand"><img src="/cn-logo.png" className="cnlogo" alt="Creators Network" /></div>
         <div className="grp"><div className="lbl">Shared with you</div><button className={'nav ' + (!item ? 'on' : '')} onClick={() => setSelected('')}>Shared calendar</button>{item ? <button className="nav on">{(item.title || item.type || 'Post').slice(0, 24)}</button> : null}</div>
         <div className="plock"><b>Private client view</b>Shared outputs only. Internal notes, capacity, QC discussion and assignments are excluded.</div>
       </aside>
       <div>
         <div className="top">
           <div className="crumb">{item ? <><button onClick={() => setSelected('')}>Shared calendar</button> / <b>{item.title || item.type}</b></> : <>{d?.client || 'Client'} / <b>Shared calendar</b></>}</div>
-          {d ? <div className="cobrand"><span className="cmark" style={{ width: 28, height: 28, fontSize: 9 }}>{mark(d.client)}</span><div className="div" /><img src="/cn-logo.png" style={{ height: 30 }} alt="Creators Network" /></div> : null}
+          {d ? <div className="cobrand">
+            {d.clientLogo
+              ? <img src={d.clientLogo} alt={d.client || 'Client'} style={{ height: 28, maxWidth: 90, objectFit: 'contain' }} />
+              : <span className="cmark" style={{ width: 28, height: 28, fontSize: 9 }}>{mark(d.client)}</span>}
+            <div className="div" /><img src="/cn-logo.png" style={{ height: 30 }} alt="Creators Network" /></div> : null}
         </div>
         <main className="main">
           {err ? <div className="alertbar">{err}</div> : null}
