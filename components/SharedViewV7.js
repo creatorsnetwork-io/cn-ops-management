@@ -29,7 +29,50 @@ function Reply({ d, token }) {
   </div></div>;
 }
 
-function Brief({ d, token }) {
+function Deliver({ d, token, onDelivered }) {
+  const [name, setName] = useState('');
+  const [link, setLink] = useState('');
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [err, setErr] = useState('');
+
+  async function submit() {
+    if (!name.trim()) { setErr('Your name first, so we know who delivered it.'); return; }
+    if (!link.trim()) { setErr('Paste the Drive link to what you made.'); return; }
+    setBusy(true); setErr('');
+    const r = await fetch('/api/shared/' + token, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ kind: 'delivered', by: name, text: note, link }),
+    });
+    const j = await r.json(); setBusy(false);
+    if (!j.ok) { setErr(j.error); return; }
+    setSent(true); onDelivered();
+  }
+
+  const already = sent || d.state !== 'progress';
+
+  return <div className="panel"><header><h2>Deliver</h2></header><div className="pad">
+    {already ? (
+      <div className="guard">
+        {sent || ['submitted', 'craft', 'ship', 'client', 'approved', 'done'].includes(d.state)
+          ? 'Delivered. The team has your file and it is with them now.'
+          : 'This job is not open for delivery yet. Ask your contact at Creators Network if you think that is wrong.'}
+      </div>
+    ) : <>
+      <div className="fl">Your name</div>
+      <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+      <div className="fl" style={{ marginTop: 13 }}>Paste the Drive link to your output</div>
+      <input type="text" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://drive.google.com/..." />
+      <div className="fl" style={{ marginTop: 13 }}>Anything we should know</div>
+      <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional note" />
+      {err ? <div className="note" style={{ color: 'var(--bad)' }}>{err}</div> : null}
+      <div style={{ marginTop: 13 }}><button className="btn dark" disabled={busy} onClick={submit}>{busy ? 'Sending' : 'Submit round'}</button></div>
+    </>}
+  </div></div>;
+}
+
+function Brief({ d, token, onDelivered }) {
   return <>
     <div className="panel"><header><h2>The brief</h2><span className="tag ok">Checked before sending</span></header><table><tbody>
       <tr><td className="dim" style={{ width: 180 }}>Deliverable</td><td className="b">{d.title}</td></tr>
@@ -44,7 +87,7 @@ function Brief({ d, token }) {
 
     <Reply d={d} token={token} />
 
-    <div className="panel"><header><h2>Deliver</h2></header><div className="pad"><div className="fl">Paste the Drive link to your output</div><input type="text" disabled placeholder="https://drive.google.com/..." /><div className="fl" style={{ marginTop: 13 }}>Anything we should know</div><textarea disabled placeholder="Optional note" /><div style={{ marginTop: 13 }}><button className="btn dark" disabled title="The shared-link API has no delivery submission action">Submit round</button></div><p className="note" style={{ marginTop: 9 }}>The current shared-link API accepts job replies but has no delivery submission action. The controls stay disabled until that endpoint exists.</p></div></div>
+    <Deliver d={d} token={token} onDelivered={onDelivered} />
   </>;
 }
 
@@ -71,7 +114,7 @@ export default function SharedViewV7({ token }) {
     <aside className="pside"><div className="brand"><img src="/cn-logo.png" className="cnlogo" alt="Creators Network" /></div><div className="grp"><div className="lbl">This job only</div><button className="nav on">{d?.kind === 'callsheet' ? 'Call sheet and reply' : 'Brief and delivery'}</button></div><div className="plock"><b>No account needed</b>One job, one link. It carries no commercial or internal operations data.</div></aside>
     <div><div className="top"><div className="crumb"><b>{d?.kind === 'callsheet' ? 'Call sheet' : 'Job brief'}</b></div><img src="/cn-logo.png" style={{ height: 30, width: 'auto' }} alt="Creators Network" /></div><main className="main">
       {err ? <div className="alertbar">{err}</div> : null}{!d && !err ? <div className="panel"><div className="pad note">Loading.</div></div> : null}
-      {d ? <><div className="head"><div><div className="eyebrow">{d.client} · {d.project}</div><h1>{d.title}</h1><p className="lede">Everything needed for this job is on this page. Due {dayOf(d.due)}.</p></div></div>{d.note ? <div className="guard">{d.note}</div> : null}{d.kind === 'brief' ? <Brief d={d} token={token} /> : <CallSheet d={d} token={token} />}<p className="note">You do not need an account. Every working reply lands on the job itself.</p></> : null}
+      {d ? <><div className="head"><div><div className="eyebrow">{d.client} · {d.project}</div><h1>{d.title}</h1><p className="lede">Everything needed for this job is on this page. Due {dayOf(d.due)}.</p></div></div>{d.note ? <div className="guard">{d.note}</div> : null}{d.kind === 'brief' ? <Brief d={d} token={token} onDelivered={() => setD((prev) => ({ ...prev, state: 'submitted' }))} /> : <CallSheet d={d} token={token} />}<p className="note">You do not need an account. Every working reply lands on the job itself.</p></> : null}
     </main></div>
   </div>;
 }

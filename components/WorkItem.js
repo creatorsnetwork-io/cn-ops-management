@@ -9,7 +9,7 @@ import { can as canDo } from '../lib/perm';
 const when = (t) => (t ? new Date(t).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
 const dayOf = (d) => (d ? new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', timeZone: 'UTC' }) : '');
 
-export default function WorkItem({ initial, who, people, leadName, canEdit }) {
+export default function WorkItem({ initial, who, people, vendors, leadName, canEdit }) {
   const [i, setI] = useState(initial);
   const [v, setV] = useState(null);
   const [note, setNote] = useState('');
@@ -65,12 +65,25 @@ export default function WorkItem({ initial, who, people, leadName, canEdit }) {
     if (j.ok) setI(j.item); else setErr(j.error);
   }
 
+  // Vendor is record keeping only, kept separate from assignee so it never
+  // touches who is internally accountable for moving the item along.
+  async function saveVendor(vendorId) {
+    setBusy(true); setErr('');
+    const r = await fetch('/api/work', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'assign', id: i._id, vendorId }),
+    });
+    const j = await r.json(); setBusy(false);
+    if (j.ok) setI(j.item); else setErr(j.error);
+  }
+
   return (
     <>
       <div className="eyebrow">{i.client}, {i.projectName}</div>
       <h1>{i.title}</h1>
       <p className="lede">
         {KINDS[i.kind]?.label || i.kind}. {i.assigneeName ? 'With ' + i.assigneeName : 'Nobody assigned'}.
+        {i.vendorName ? ' Vendor: ' + i.vendorName + '.' : ''}
         {i.due ? ' Due ' + dayOf(i.due) + '.' : ' No date set.'}
         {isLate(i) ? ' This is late.' : ''}
       </p>
@@ -146,6 +159,12 @@ export default function WorkItem({ initial, who, people, leadName, canEdit }) {
               <label><div className="k">Due</div>
                 <input className="inp" style={{ width: 'auto' }} type="date" value={i.due || ''}
                   onChange={(e) => saveAssign(i.assignee || '', e.target.value)} disabled={busy} /></label>
+              <label><div className="k">Vendor or freelancer</div>
+                <select className="inp" style={{ width: 'auto' }} value={i.vendorId || ''}
+                  onChange={(e) => saveVendor(e.target.value)} disabled={busy}>
+                  <option value="">None</option>
+                  {(vendors || []).map((v) => <option key={v._id} value={v._id}>{v.name}</option>)}
+                </select></label>
               {err ? <span style={{ color: 'var(--bad)', fontSize: 12.5 }}>{err}</span> : null}
             </div>)}
           <div style={{ padding: '11px 16px', borderTop: '1px solid var(--line2)', fontSize: 12.5, color: 'var(--faint)' }}>
@@ -161,7 +180,7 @@ export default function WorkItem({ initial, who, people, leadName, canEdit }) {
             ? <span style={{ display: 'flex', gap: 6 }}>
                 <button className="btn sm dark" disabled={busy} onClick={saveEdit}>Save</button>
                 <button className="btn sm" onClick={() => setEdit(null)}>Cancel</button></span>
-            : <button className="btn sm" onClick={() => setEdit({ title: i.title, brief: i.brief || '', acceptance: i.acceptance || '', due: i.due || '', assignee: i.assignee || '', driveLink: i.driveLink || '', docLink: i.docLink || '' })}>Edit</button>) : null}
+            : <button className="btn sm" onClick={() => setEdit({ title: i.title, brief: i.brief || '', acceptance: i.acceptance || '', due: i.due || '', assignee: i.assignee || '', vendorId: i.vendorId || '', driveLink: i.driveLink || '', docLink: i.docLink || '' })}>Edit</button>) : null}
         </header>
         {edit ? (
           <div style={{ padding: '14px 16px', display: 'grid', gap: 11 }}>
@@ -173,6 +192,11 @@ export default function WorkItem({ initial, who, people, leadName, canEdit }) {
                   {people.map((p) => <option key={p.slug} value={p.slug}>{p.name}</option>)}
                 </select></label>
               <label><div className="k">Due</div><input className="inp" type="date" value={edit.due} onChange={(e) => setEdit({ ...edit, due: e.target.value })} /></label>
+              <label><div className="k">Vendor or freelancer</div>
+                <select className="inp" value={edit.vendorId} onChange={(e) => setEdit({ ...edit, vendorId: e.target.value })}>
+                  <option value="">None</option>
+                  {(vendors || []).map((v) => <option key={v._id} value={v._id}>{v.name}</option>)}
+                </select></label>
             </div>
             <label><div className="k">Brief</div><textarea className="inp" style={{ minHeight: 120 }} value={edit.brief} onChange={(e) => setEdit({ ...edit, brief: e.target.value })} /></label>
             <label><div className="k">What counts as done</div><input className="inp" value={edit.acceptance} onChange={(e) => setEdit({ ...edit, acceptance: e.target.value })} /></label>

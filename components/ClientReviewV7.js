@@ -41,6 +41,7 @@ export default function ClientReviewV7({ token }) {
   const [selected, setSelected] = useState('');
   const [channel, setChannel] = useState('');
   const [show, setShow] = useState(false);
+  const [logoBroken, setLogoBroken] = useState(false);
 
   useEffect(() => {
     fetch('/api/client/' + token).then((r) => r.json()).then((j) => j.ok ? setD(j) : setErr(j.error)).catch((e) => setErr(String(e)));
@@ -67,8 +68,8 @@ export default function ClientReviewV7({ token }) {
         <div className="top">
           <div className="crumb">{item ? <><button onClick={() => setSelected('')}>Shared calendar</button> / <b>{item.title || item.type}</b></> : <>{d?.client || 'Client'} / <b>Shared calendar</b></>}</div>
           {d ? <div className="cobrand">
-            {d.clientLogo
-              ? <img src={d.clientLogo} alt={d.client || 'Client'} style={{ height: 28, maxWidth: 90, objectFit: 'contain' }} />
+            {d.clientLogo && !logoBroken
+              ? <img src={d.clientLogo} alt={d.client || 'Client'} style={{ height: 28, maxWidth: 90, objectFit: 'contain' }} onError={() => setLogoBroken(true)} />
               : <span className="cmark" style={{ width: 28, height: 28, fontSize: 9 }}>{mark(d.client)}</span>}
             <div className="div" /><img src="/cn-logo.png" style={{ height: 30 }} alt="Creators Network" /></div> : null}
         </div>
@@ -97,7 +98,7 @@ export default function ClientReviewV7({ token }) {
               </div>
               <div className="panel"><header><h2>The creative</h2><span className="hint">shared from Drive</span></header><div className="pad">
                 {emb && show ? <iframe className="prev" src={emb} allow="autoplay" title="Creative preview" /> : <div className="prev"><span>{item.type || 'Creative'} preview</span></div>}
-                <div className="rowb" style={{ marginTop: 12 }}>{emb ? <button className="btn" onClick={() => setShow(!show)}>{show ? 'Hide preview' : 'Preview here'}</button> : null}{item.creativeLink ? <a className="btn" href={item.creativeLink} target="_blank" rel="noreferrer">Open in Drive</a> : <span className="note">The file is still coming.</span>}</div>
+                <div className="rowb" style={{ marginTop: 12 }}>{emb ? <button className="btn" onClick={() => setShow(!show)}>{show ? 'Hide preview' : 'Preview here'}</button> : null}{item.creativeLink ? <a className="btn" href={item.creativeLink} target="_blank" rel="noreferrer">Open in Drive</a> : <span className="note">No preview available.</span>}</div>
               </div></div>
             </div>
           </> : null}

@@ -12,6 +12,7 @@ const PROJECTION = `{
   createdAt, deliverable, history, feedback,
   "assignee": assignee->slug, "assigneeName": assignee->name,
   "owner": owner->slug, "ownerName": owner->name,
+  "vendorId": vendor._ref, "vendorName": vendor->name,
   "projectSlug": project->slug, "projectName": project->name, "client": project->client->name
 }`;
 
@@ -60,6 +61,7 @@ export async function POST(req) {
         deliverable: String(body.deliverable || '').slice(0, 120),
         project: { _type: 'reference', _ref: 'project.' + body.projectSlug },
         assignee: body.assignee ? { _type: 'reference', _ref: 'person.' + body.assignee } : undefined,
+        vendor: body.vendorId ? { _type: 'reference', _ref: body.vendorId, _weak: true } : undefined,
         owner: { _type: 'reference', _ref: 'person.' + (body.owner || who) },
         history: [{ _key: 'h' + Date.now(), at: now, who, from: '', to: 'briefed', note: 'Briefed' }],
         feedback: [],
@@ -122,7 +124,7 @@ export async function POST(req) {
         if (body.firstTime !== undefined) patch.firstTime = !!body.firstTime;
       }
 
-      if (body.assignee !== undefined || body.due !== undefined) {
+      if (body.assignee !== undefined || body.due !== undefined || body.vendorId !== undefined) {
         const check = canAssign(item, who);
         if (!check.ok) return Response.json({ ok: false, error: check.why }, { status: 403 });
         if (body.assignee !== undefined) {
@@ -131,6 +133,9 @@ export async function POST(req) {
           patch.assignee = body.assignee ? { _type: 'reference', _ref: 'person.' + body.assignee } : null;
         }
         if (body.due !== undefined) patch.due = body.due || null;
+        // Record keeping only, same as assignee: who is actually doing the work
+        // outside the team. Nothing else reads this yet.
+        if (body.vendorId !== undefined) patch.vendor = body.vendorId ? { _type: 'reference', _ref: body.vendorId, _weak: true } : null;
       }
 
       if (!Object.keys(patch).length) return Response.json({ ok: false, error: 'Nothing to change.' }, { status: 400 });

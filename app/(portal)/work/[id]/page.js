@@ -10,16 +10,18 @@ const PROJECTION = `{
   _id, title, kind, state, due, brief, acceptance, driveLink, docLink, needsCraft,
   history, feedback, callSheet,
   "assignee": assignee->slug, "assigneeName": assignee->name,
+  "vendorId": vendor._ref, "vendorName": vendor->name,
   "projectSlug": project->slug, "projectName": project->name, "client": project->client->name
 }`;
 
 export default async function Page({ params }) {
   const who = meSlug();
-  let item = null, people = [], error = null, leadName = null;
+  let item = null, people = [], vendors = [], error = null, leadName = null;
   try {
-    [item, people, leadName] = await Promise.all([
+    [item, people, vendors, leadName] = await Promise.all([
       sanity(true).fetch(`*[_id==$id][0]${PROJECTION}`, { id: params.id }),
       sanity(true).fetch('*[_type=="person" && active==true]|order(name asc){slug,name}'),
+      sanity(true).fetch('*[_type=="vendor" && active==true]|order(name asc){_id,name,kind}'),
       leadNameOf(who),
     ]);
   } catch (e) { error = e.message; }
@@ -30,7 +32,7 @@ export default async function Page({ params }) {
   return (
     <>
       <Link className="btn sm" href="/work">Back to all work</Link>
-      <WorkItem initial={item} who={who} people={people} leadName={leadName} canEdit={['himanshu', 'aashif'].includes(who)} />
+      <WorkItem initial={item} who={who} people={people} vendors={vendors} leadName={leadName} canEdit={['himanshu', 'aashif'].includes(who)} />
     </>
   );
 }
