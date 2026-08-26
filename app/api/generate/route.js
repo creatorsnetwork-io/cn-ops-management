@@ -3,6 +3,7 @@ import { meSlug } from '../../../lib/me';
 import { can } from '../../../lib/perm';
 import { readProjectWeek, log } from '../../../lib/week';
 import { chat, HOUSE, LIMITS_TEXT } from '../../../lib/ai';
+import { checkWeekImages } from '../../../lib/imagecheck';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -86,6 +87,7 @@ Format: ${item.type || 'not stated'}
 Idea: ${item.title || 'not stated'}
 ${item.remarks ? 'Notes on the sheet: ' + item.remarks : ''}
 ${written ? '\nCaptions already written for other channels, match their voice and do not repeat them word for word:\n' + written : ''}
+${b.guidance ? '\nThe person asking for this draft added this note, follow it, it overrides anything above that conflicts with it:\n' + String(b.guidance).slice(0, 400) : ''}
 
 Write a caption for each of these channels: ${channels.join(', ')}.
 Each one should read as if written for that channel, not copied between them.`,
@@ -242,6 +244,20 @@ ${body}`,
         .set({ toneFlags, toneAt: now, toneBy: who, toneModel: out.model }).commit();
       await log(who, 'Read the week for tone', b.slug + ':' + w.week, toneFlags.length + ' notes via ' + out.model);
       return Response.json({ ok: true, count: toneFlags.length, model: out.model });
+    }
+
+    if (b.action === 'image') {
+      const w = await readProjectWeek(b.slug, b.week);
+      if (w.error) return Response.json({ ok: false, error: w.error });
+
+      const result = await checkWeekImages(w.items);
+
+      await c.createIfNotExists({ _id: 'week.' + b.slug + '.' + w.week, _type: 'weekReview', projectSlug: b.slug, week: w.week, items: [], flags: [] });
+      await c.patch('week.' + b.slug + '.' + w.week)
+        .set({ imageFlags: result.flags, imageAt: now, imageBy: who }).commit();
+      await log(who, 'Checked images against captions', b.slug + ':' + w.week,
+        result.flags.length + ' note(s), ' + result.checked + ' checked, ' + result.cached + ' cached, ' + result.skipped + ' skipped of ' + result.total);
+      return Response.json({ ok: true, count: result.flags.length, checked: result.checked, cached: result.cached, skipped: result.skipped, total: result.total });
     }
 
     if (b.action === 'discard') {

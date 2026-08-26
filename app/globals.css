@@ -492,3 +492,8 @@ a.sr{text-decoration:none;color:inherit}
 @media (max-width: 820px){
   .wi .ac{width:100%;padding-left:52px}
 }
+
+/* A busy indicator any button can drop in next to its label. Small, quiet,
+   never louder than the text next to it, but unmissable while it spins. */
+.spin{width:11px;height:11px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--muted);display:inline-block;animation:spin .7s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}

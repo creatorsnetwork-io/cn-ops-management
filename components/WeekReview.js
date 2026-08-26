@@ -37,6 +37,9 @@ function Preview({ link, text }) {
     </div>);
 }
 
+// A quiet spinner any busy button on this page can drop in next to its own label.
+function Spin() { return <span className="spin" aria-label="working" />; }
+
 function Flag({ f, item, slug, week, canWaive, onDone }) {
   const [ask, setAsk] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -67,7 +70,7 @@ function Flag({ f, item, slug, week, canWaive, onDone }) {
       <span style={{ fontSize: 11.5, color: 'var(--faint)' }}>
         {f.waivedScope === 'rule' ? 'standing rule' : 'by ' + f.waivedBy}
       </span>
-      {canWaive ? <button className="btn link" style={{ fontSize: 11.5 }} disabled={busy} onClick={undo}>require it again</button> : null}
+      {canWaive ? <button className="btn link" style={{ fontSize: 11.5 }} disabled={busy} onClick={undo}>{busy ? <><Spin /> Undoing</> : 'require it again'}</button> : null}
     </div>);
 
   return (
@@ -77,9 +80,9 @@ function Flag({ f, item, slug, week, canWaive, onDone }) {
       {canWaive && !ask ? <button className="btn link" style={{ fontSize: 11.5 }} onClick={() => setAsk(true)}>not required</button> : null}
       {ask ? (
         <div style={{ marginTop: 5, display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
-          <button className="btn sm" disabled={busy} onClick={() => send('once')}>Just this one</button>
+          <button className="btn sm" disabled={busy} onClick={() => send('once')}>{busy ? <><Spin /> Saving</> : 'Just this one'}</button>
           {item.type ? <button className="btn sm dark" disabled={busy} onClick={() => send('always')}>
-            Always for {item.type}
+            {busy ? <><Spin /> Saving</> : <>Always for {item.type}</>}
           </button> : null}
           <button className="btn sm" onClick={() => setAsk(false)}>Cancel</button>
         </div>) : null}
@@ -160,23 +163,34 @@ export default function WeekReview({ slug, startWeek }) {
               <p className="note" style={{ marginTop: 10 }}>
                 {d.sheetTitle}, tab {d.tab}. {d.qcAt ? 'Checks last run ' + when(d.qcAt) + ' by ' + d.qcBy + '.' : 'Checks have not been run for this week.'}
                 {d.toneAt ? ' Read for tone ' + when(d.toneAt) + ' by ' + d.toneBy + ', ' + (d.toneCount || 0) + ' note' + (d.toneCount === 1 ? '' : 's') + '. Tone notes never block a gate.' : ''}
+                {d.imageAt ? ' Images checked ' + when(d.imageAt) + ' by ' + d.imageBy + ', ' + (d.imageCount || 0) + ' note' + (d.imageCount === 1 ? '' : 's') + '. Image notes never block a gate.' : ''}
               </p>
             </div>
 
             <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--line2)', display: 'flex', gap: 7, flexWrap: 'wrap', alignItems: 'center' }}>
-              <button className="btn sm dark" disabled={busy === 'qc'} onClick={() => act('qc')}>{busy === 'qc' ? 'Checking' : 'Run quality checks'}</button>
+              <button className="btn sm dark" disabled={!!busy} onClick={() => act('qc')}>{busy === 'qc' ? <><Spin /> Checking</> : 'Run quality checks'}</button>
               {can(P.who || '', 'generate') !== 'no' ? (
-                <button className="btn sm" disabled={busy === 'tone'} onClick={async () => {
+                <button className="btn sm" disabled={!!busy} onClick={async () => {
                   setBusy('tone'); setMsg('');
                   const r = await fetch('/api/generate', {
                     method: 'POST', headers: { 'content-type': 'application/json' },
                     body: JSON.stringify({ action: 'tone', slug, week }),
                   });
                   const j = await r.json(); setBusy('');
-                  if (j.ok) { setMsg(''); load(); } else setMsg(j.error);
-                }}>{busy === 'tone' ? 'Reading' : '✦ Read it for tone'}</button>) : null}
+                  if (j.ok) { setMsg(j.count ? '' : 'Read the week, nothing worth raising.'); load(); } else setMsg(j.error);
+                }}>{busy === 'tone' ? <><Spin /> Reading</> : '✦ Read it for tone'}</button>) : null}
+              {can(P.who || '', 'generate') !== 'no' ? (
+                <button className="btn sm" disabled={!!busy} onClick={async () => {
+                  setBusy('image'); setMsg('');
+                  const r = await fetch('/api/generate', {
+                    method: 'POST', headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ action: 'image', slug, week }),
+                  });
+                  const j = await r.json(); setBusy('');
+                  if (j.ok) { setMsg(j.count ? '' : 'Checked ' + j.total + ' item(s), nothing to flag.'); load(); } else setMsg(j.error);
+                }}>{busy === 'image' ? <><Spin /> Checking images</> : '✦ Check images against captions'}</button>) : null}
               {can(P.who || '', 'generate') !== 'no' && !shipped ? (
-                <button className="btn sm" disabled={busy === 'ideas'} onClick={async () => {
+                <button className="btn sm" disabled={!!busy} onClick={async () => {
                   setBusy('ideas'); setMsg('');
                   const r = await fetch('/api/generate', {
                     method: 'POST', headers: { 'content-type': 'application/json' },
@@ -184,23 +198,23 @@ export default function WeekReview({ slug, startWeek }) {
                   });
                   const j = await r.json(); setBusy('');
                   setMsg(j.ok ? 'Drafted ' + j.drafts.length + ' idea(s). Open a row to see and write them.' : j.error);
-                }}>{busy === 'ideas' ? 'Thinking' : '✦ Draft ideas for empty rows'}</button>) : null}
+                }}>{busy === 'ideas' ? <><Spin /> Thinking</> : '✦ Draft ideas for empty rows'}</button>) : null}
               {P.canCraft && !shipped ? (
-                <button className="btn sm" disabled={busy === 'craft' || !notApproved.length}
+                <button className="btn sm" disabled={!!busy || !notApproved.length}
                   onClick={() => act('craft', { keys: notApproved.map((i) => i.key), decision: 'approved' })}>
-                  {notApproved.length ? 'Approve all creative (' + notApproved.length + ')' : 'All creative approved'}
+                  {busy === 'craft' ? <><Spin /> Approving</> : notApproved.length ? 'Approve all creative (' + notApproved.length + ')' : 'All creative approved'}
                 </button>) : null}
               {P.canCraft && !crafted && !notApproved.length ? (
-                <button className="btn sm dark" disabled={busy === 'craftGate'} onClick={() => act('craftGate')}>Sign the craft gate</button>) : null}
+                <button className="btn sm dark" disabled={!!busy} onClick={() => act('craftGate')}>{busy === 'craftGate' ? <><Spin /> Signing</> : 'Sign the craft gate'}</button>) : null}
               {P.canShip && crafted && !shipped && !d.blocking ? (
-                <button className="btn sm dark" disabled={busy === 'ship'} onClick={() => act('ship')}>Sign the ship gate</button>) : null}
+                <button className="btn sm dark" disabled={!!busy} onClick={() => act('ship')}>{busy === 'ship' ? <><Spin /> Signing</> : 'Sign the ship gate'}</button>) : null}
               {canOverride && crafted && !shipped && d.blocking ? (
-                <button className="btn sm req" disabled={busy === 'ship'} onClick={() => {
+                <button className="btn sm req" disabled={!!busy} onClick={() => {
                   const note = window.prompt('Sending with ' + d.blocking + ' flag(s) still open. Why?');
                   if (note && note.trim()) act('ship', { override: true, note });
-                }}>Send anyway, {d.blocking} open</button>) : null}
+                }}>{busy === 'ship' ? <><Spin /> Sending</> : <>Send anyway, {d.blocking} open</>}</button>) : null}
               {P.share === 'yes' && shipped && !d.clientToken ? (
-                <button className="btn sm dark" disabled={busy === 'share'} onClick={() => act('share')}>Create the client link</button>) : null}
+                <button className="btn sm dark" disabled={!!busy} onClick={() => act('share')}>{busy === 'share' ? <><Spin /> Creating</> : 'Create the client link'}</button>) : null}
               {d.clientToken ? (
                 <>
                   <input className="inp mono" style={{ width: 330 }} readOnly value={typeof window !== 'undefined' ? window.location.origin + '/c/' + d.clientToken : ''} onFocus={(e) => e.target.select()} />
@@ -208,7 +222,8 @@ export default function WeekReview({ slug, startWeek }) {
                   <a className="btn sm" target="_blank" rel="noreferrer" href={'/c/' + d.clientToken}>Open as the client sees it</a>
                 </>) : null}
               {P.canShip && shipped ? (
-                <button className="btn sm" disabled={busy === 'unship'} onClick={() => act('unship')}>Reopen the week</button>) : null}
+                <button className="btn sm" disabled={!!busy} onClick={() => act('unship')}>{busy === 'unship' ? <><Spin /> Reopening</> : 'Reopen the week'}</button>) : null}
+              {busy ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--faint)', fontSize: 12 }}><Spin /> working</span> : null}
               {msg ? <span style={{ fontSize: 12.5, color: 'var(--bad)' }}>{msg}</span> : null}
             </div>
 
@@ -250,6 +265,11 @@ export default function WeekReview({ slug, startWeek }) {
                             <div key={'t' + k} style={{ marginTop: 3 }}>
                               <span className="tag info">tone</span>{' '}
                               <span style={{ fontSize: 12.5 }}>{t.note}</span>
+                            </div>))}
+                          {((d.image || {})[i.key] || []).map((t, k) => (
+                            <div key={'im' + k} style={{ marginTop: 3 }}>
+                              <span className="tag warn">image{t.channel ? ', ' + t.channel : ''}</span>{' '}
+                              <span style={{ fontSize: 12.5 }}>{t.note}</span>
                             </div>))}</td>
                         <td>
                           {rv.craft === 'approved' ? <span className="tag ok">signed by {rv.craftBy}</span>
@@ -257,8 +277,8 @@ export default function WeekReview({ slug, startWeek }) {
                             : <span className="tag mute">waiting</span>}
                           {P.canCraft && !shipped ? (
                             <div style={{ display: 'flex', gap: 5, marginTop: 6 }}>
-                              {rv.craft !== 'approved' ? <button className="btn sm" onClick={(e) => { stop(e); act('craft', { keys: [i.key], decision: 'approved' }); }}>Approve</button> : null}
-                              {rv.craft !== 'changes' ? <button className="btn sm" onClick={(e) => { stop(e); act('craft', { keys: [i.key], decision: 'changes' }); }}>Changes</button> : null}
+                              {rv.craft !== 'approved' ? <button className="btn sm" disabled={!!busy} onClick={(e) => { stop(e); act('craft', { keys: [i.key], decision: 'approved' }); }}>Approve</button> : null}
+                              {rv.craft !== 'changes' ? <button className="btn sm" disabled={!!busy} onClick={(e) => { stop(e); act('craft', { keys: [i.key], decision: 'changes' }); }}>Changes</button> : null}
                             </div>) : null}
                         </td>
                         <td>
@@ -296,7 +316,8 @@ export default function WeekReview({ slug, startWeek }) {
                             <div className="lbl" style={{ marginBottom: 6 }}>The creative</div>
                             <Preview link={i.creativeLink} text={i.creativeText} />
                           </div>
-                          <DraftPanel slug={slug} week={week} item={i} who={P.who || ''} onWritten={load} />
+                          <DraftPanel slug={slug} week={week} item={i} who={P.who || ''} onWritten={load}
+                            qcAt={d.qcAt} flags={fl} imageFlags={(d.image || {})[i.key] || []} />
 
                           <div style={{ marginTop: 13, display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12.5, color: 'var(--muted)' }}>
                             <span>Sheet row <b>{i.sheetRow}</b></span>

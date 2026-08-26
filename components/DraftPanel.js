@@ -2,9 +2,11 @@
 import { useState } from 'react';
 import { can } from '../lib/perm';
 
+function Spin() { return <span className="spin" aria-label="working" />; }
+
 // Drafting and, separately, writing into the sheet. The two are deliberately
 // different buttons: a draft costs nothing, a write changes a client's calendar.
-export default function DraftPanel({ slug, week, item, who, onWritten }) {
+export default function DraftPanel({ slug, week, item, who, onWritten, qcAt, flags, imageFlags }) {
   const rights = can(who, 'generate');
   const [drafts, setDrafts] = useState({});
   const [busy, setBusy] = useState('');
@@ -17,11 +19,31 @@ export default function DraftPanel({ slug, week, item, who, onWritten }) {
   const empty = (item.captions || []).filter((c) => !c.has);
   const filled = (item.captions || []).filter((c) => c.has);
 
+  // Before drafting on top of a row that already has an open note, or that has
+  // never been checked at all, ask rather than silently repeat a known mistake.
+  // A prompt instead of a plain confirm lets the person fix it right here,
+  // for example correcting a wrong destination, instead of clicking past it.
+  function guardText() {
+    const open = (flags || []).filter((f) => !f.waived);
+    const images = imageFlags || [];
+    if (!qcAt) return 'Quality checks have not been run yet for this week. If you know of anything wrong with this row, note it here to guide the draft, otherwise leave this blank. Cancel to stop and run checks first instead.';
+    if (images.length) return 'This row has an open image note: "' + images[0].note + '". If that is a real problem, for example the wrong destination, say the correct one here so the draft gets it right. Leave blank to draft as before anyway. Cancel to stop.';
+    if (open.length) return 'This row has an open flag: "' + open[0].message + '". Note anything the draft should fix, or leave blank to draft anyway. Cancel to stop.';
+    return null;
+  }
+
   async function draft(onlyEmpty) {
+    const warn = guardText();
+    let guidance = '';
+    if (warn) {
+      const typed = window.prompt(warn);
+      if (typed === null) return; // Cancel: stop, draft nothing
+      guidance = typed.trim();
+    }
     setBusy('draft'); setErr(''); setMsg('');
     const r = await fetch('/api/generate', {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ action: 'captions', slug, week, key: item.key, onlyEmpty }),
+      body: JSON.stringify({ action: 'captions', slug, week, key: item.key, onlyEmpty, guidance }),
     });
     const j = await r.json(); setBusy('');
     if (!j.ok) { setErr(j.error); return; }
@@ -58,12 +80,12 @@ export default function DraftPanel({ slug, week, item, who, onWritten }) {
     <div style={{ marginTop: 14, paddingTop: 13, borderTop: '1px dashed var(--line)' }}>
       <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', alignItems: 'center' }}>
         {empty.length ? (
-          <button className="btn sm dark" disabled={busy === 'draft'} onClick={() => draft(true)}>
-            {busy === 'draft' ? 'Drafting' : '✦ Draft the ' + empty.length + ' missing caption' + (empty.length === 1 ? '' : 's')}
+          <button className="btn sm dark" disabled={!!busy} onClick={() => draft(true)}>
+            {busy === 'draft' ? <><Spin /> Drafting</> : '✦ Draft the ' + empty.length + ' missing caption' + (empty.length === 1 ? '' : 's')}
           </button>) : null}
         {filled.length ? (
-          <button className="btn sm" disabled={busy === 'draft'} onClick={() => draft(false)}>
-            {'✦ Redraft everything'}
+          <button className="btn sm" disabled={!!busy} onClick={() => draft(false)}>
+            {busy === 'draft' ? <><Spin /> Drafting</> : '✦ Redraft everything'}
           </button>) : null}
         {rights !== 'yes' ? <span className="pill">{rights}</span> : null}
         {msg ? <span style={{ fontSize: 12.5, color: 'var(--ok)' }}>{msg}</span> : null}
@@ -76,8 +98,8 @@ export default function DraftPanel({ slug, week, item, who, onWritten }) {
             <b style={{ fontSize: 12.5 }}>{ch}, draft</b>
             <span style={{ display: 'flex', gap: 5 }}>
               <button className="btn sm" onClick={() => navigator.clipboard.writeText(drafts[ch].text)}>Copy</button>
-              <button className="btn sm dark" disabled={busy === ch} onClick={() => write(ch, 'fill')}>
-                {busy === ch ? 'Writing' : 'Write it into the sheet'}
+              <button className="btn sm dark" disabled={!!busy} onClick={() => write(ch, 'fill')}>
+                {busy === ch ? <><Spin /> Writing</> : 'Write it into the sheet'}
               </button>
               <button className="btn sm" onClick={() => { const n = { ...drafts }; delete n[ch]; setDrafts(n); }}>Bin it</button>
             </span>
@@ -102,8 +124,8 @@ export default function DraftPanel({ slug, week, item, who, onWritten }) {
               recorded against your name either way.
             </p>
             <div style={{ display: 'flex', gap: 7, marginTop: 10 }}>
-              <button className="btn dark" disabled={busy === conflict.channel} onClick={() => write(conflict.channel, 'replace')}>
-                Replace it anyway
+              <button className="btn dark" disabled={!!busy} onClick={() => write(conflict.channel, 'replace')}>
+                {busy === conflict.channel ? <><Spin /> Replacing</> : 'Replace it anyway'}
               </button>
               <button className="btn" onClick={() => { setConflict(null); setErr(''); }}>Leave it alone</button>
             </div>

@@ -68,6 +68,9 @@ function shape(d, week, items) {
     toneAt: r.toneAt || null, toneBy: r.toneBy || null, toneModel: r.toneModel || null,
     tone: (r.toneFlags || []).reduce((m, f) => { (m[f.key] = m[f.key] || []).push(f); return m; }, {}),
     toneCount: (r.toneFlags || []).length,
+    imageAt: r.imageAt || null, imageBy: r.imageBy || null,
+    image: (r.imageFlags || []).reduce((m, f) => { (m[f.key] = m[f.key] || []).push(f); return m; }, {}),
+    imageCount: (r.imageFlags || []).length,
     craftGate: r.craftGate || null,
     shipGate: r.shipGate || null,
     drift: (r.items || []).filter((it) => it.craft === 'approved' && state[it.key] &&
