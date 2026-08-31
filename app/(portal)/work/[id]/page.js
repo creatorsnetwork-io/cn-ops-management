@@ -1,10 +1,9 @@
 import Link from 'next/link';
 import { sanity } from '../../../../lib/sanity';
 import { meSlug } from '../../../../lib/me';
-import { can } from '../../../../lib/perm';
+import { can, workPerms } from '../../../../lib/perm';
 import WorkItem from '../../../../components/WorkItem';
 import { leadNameOf } from '../../../../lib/escalate';
-import { workPerms } from '../../../../lib/work';
 
 export const dynamic = 'force-dynamic';
 

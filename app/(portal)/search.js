@@ -1,5 +1,6 @@
 import { sanity } from '../../lib/sanity';
-import { KINDS, LABEL, scopeFilter, workPerms } from '../../lib/work';
+import { workPerms } from '../../lib/perm';
+import { KINDS, LABEL, scopeFilter } from '../../lib/work';
 
 const TYPE = {
   social: 'Social retainer', website: 'Website', seo: 'SEO', influencer: 'Influencer campaign',

@@ -1,7 +1,7 @@
 import { sanity } from '../../../lib/sanity';
 import { meSlug } from '../../../lib/me';
-import { can } from '../../../lib/perm';
-import { VERBS, verbCheck, KINDS, canCreateWork, canAssign, assignableTo, workPerms } from '../../../lib/work';
+import { can, workPerms } from '../../../lib/perm';
+import { VERBS, verbCheck, KINDS, canCreateWork, canAssign, assignableTo } from '../../../lib/work';
 import { log } from '../../../lib/week';
 
 export const dynamic = 'force-dynamic';

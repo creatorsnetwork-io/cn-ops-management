@@ -1,8 +1,8 @@
 import { sanity } from '../../../lib/sanity';
 import { meSlug } from '../../../lib/me';
-import { can } from '../../../lib/perm';
+import { can, workPerms } from '../../../lib/perm';
 import WorkList from '../../../components/WorkList';
-import { canCreateWork, workPerms } from '../../../lib/work';
+import { canCreateWork } from '../../../lib/work';
 
 export const dynamic = 'force-dynamic';
 

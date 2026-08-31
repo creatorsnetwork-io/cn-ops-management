@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import { sanity } from '../../../../lib/sanity';
 import { meSlug } from '../../../../lib/me';
-import { can } from '../../../../lib/perm';
-import { workPerms } from '../../../../lib/work';
+import { can, workPerms } from '../../../../lib/perm';
 import ProjectDetail from '../../../../components/ProjectDetail';
 
 export const dynamic = 'force-dynamic';
