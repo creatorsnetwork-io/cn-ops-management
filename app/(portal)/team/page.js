@@ -4,7 +4,7 @@ import { pageAllowed } from '../../../lib/guard';
 import NotYours from '../../../components/NotYours';
 import Team from '../../../components/Team';
 import { isLate } from '../../../lib/work';
-import { can } from '../../../lib/perm';
+import { can, fullPermTable } from '../../../lib/perm';
 import { allowedDomain } from '../../../lib/oauth';
 
 export const dynamic = 'force-dynamic';
@@ -21,9 +21,10 @@ export default async function Page() {
   const who = meSlug();
   if (!(await pageAllowed(who, '/team'))) return <NotYours what="Team and capacity" />;
 
-  let rows = [], error = null;
+  const canEditAccess = (await can(who, 'settings')) === 'yes';
+  let rows = [], perm = {}, error = null;
   try {
-    const [people, work] = await Promise.all([
+    const [people, work, permTable] = await Promise.all([
       sanity(true).fetch(
         `*[_type=="person"]|order(active desc, name asc){slug,name,role,email,active,
         "reportsToName": reportsTo->name,
@@ -31,7 +32,9 @@ export default async function Page() {
       sanity(true).fetch(
         `*[_type=="work" && !(state in ["approved","done"])]{
         title,state,due,needsCraft,"assignee":assignee->slug}`),
+      fullPermTable(),
     ]);
+    perm = permTable;
 
     const start = monday();
     const next = new Date(start); next.setUTCDate(next.getUTCDate() + 7);
@@ -79,7 +82,7 @@ export default async function Page() {
         <button className="btn" disabled>{weekLabel}</button>
       </div>
       {error ? <div className="alertbar">Sanity did not answer. <code>{error}</code></div> : null}
-      <Team rows={rows} canEdit={['himanshu', 'aashif'].includes(who)} domain={allowedDomain()} weekLabel={weekLabel} />
+      <Team rows={rows} canEdit={['himanshu', 'aashif'].includes(who)} canEditAccess={canEditAccess} perm={perm} domain={allowedDomain()} weekLabel={weekLabel} />
     </>
   );
 }

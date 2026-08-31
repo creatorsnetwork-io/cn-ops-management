@@ -1,6 +1,122 @@
 'use client';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import Link from 'next/link';
+
+// What a right can hold beyond plain yes/no. A checkbox covers yes/no; these
+// need the small dropdown next to it instead, since a flat checkbox cannot
+// say "oversight only" or "SEO content".
+const NUANCED = ['request', 'comment', 'exception', 'oversight'];
+const CAPS = [
+  ['createClient', 'Add clients'],
+  ['createProject', 'Open projects'],
+  ['uploadContract', 'Upload contracts'],
+  ['editPRD', 'Edit project briefs'],
+  ['editDeliverables', 'Set deliverable targets'],
+  ['generate', 'Draft content with AI'],
+  ['approveBrand', 'Approve the brand brain'],
+  ['approveRecap', 'Accept meeting recaps'],
+  ['approveCraft', 'Sign off creative'],
+  ['shipGate', 'Sign the ship gate'],
+  ['shipOverride', 'Ship with flags still open'],
+  ['shareClientLink', 'Share client links'],
+  ['triageFeedback', 'Decide on client feedback'],
+  ['editCalendarSources', 'Edit calendar sources'],
+  ['createWork', 'Open work items'],
+  ['assignWork', 'Assign work to others'],
+  ['closeProject', 'Close projects'],
+  ['settings', 'Change settings and access'],
+];
+
+// One right, for one person. A plain checkbox for yes/no, which covers most
+// cases. Anything already set to something in between opens the small select
+// (and a text box, for a scoped note like "SEO content") instead of hiding it.
+function AccessCell({ value, onChange }) {
+  const isPlain = value === 'yes' || value === 'no' || !value;
+  const isCustom = value && !isPlain && !NUANCED.includes(value);
+  const [open, setOpen] = useState(!isPlain);
+  const [note, setNote] = useState(isCustom ? value : '');
+
+  function toggle(e) {
+    onChange(e.target.checked ? 'yes' : 'no');
+    setOpen(false);
+  }
+
+  function pick(v) {
+    if (v === 'custom') { setOpen(true); setNote(''); return; }
+    onChange(v);
+  }
+
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+      <input type="checkbox" checked={value === 'yes'} onChange={toggle} />
+      {!open ? (
+        <button type="button" className="btn sm" style={{ padding: '1px 6px', fontSize: 11, lineHeight: 1.6 }}
+          onClick={() => setOpen(true)} title="More than yes or no">…</button>
+      ) : (
+        <>
+          <select className="f" style={{ fontSize: 11.5, padding: '2px 4px', width: 'auto' }}
+            value={isCustom ? 'custom' : (NUANCED.includes(value) ? value : 'no')}
+            onChange={(e) => pick(e.target.value)}>
+            <option value="no">No</option>
+            <option value="request">Request</option>
+            <option value="comment">Comment only</option>
+            <option value="exception">Exception</option>
+            <option value="oversight">Oversight only</option>
+            <option value="custom">Custom note</option>
+          </select>
+          {isCustom || note ? (
+            <input type="text" style={{ width: 110, fontSize: 11.5 }} value={note}
+              placeholder="e.g. SEO content" onChange={(e) => setNote(e.target.value)}
+              onBlur={() => onChange(note.trim() || 'no')} />
+          ) : null}
+          <button type="button" className="btn sm" style={{ padding: '1px 6px', fontSize: 11 }}
+            onClick={() => setOpen(false)}>Done</button>
+        </>
+      )}
+    </span>
+  );
+}
+
+// One person's whole capability table, expanded inline under their row.
+function AccessPanel({ person, perm, onChanged }) {
+  const [err, setErr] = useState('');
+
+  async function set(cap, value) {
+    setErr('');
+    const before = (perm[cap] || {})[person.slug] || 'no';
+    onChanged(cap, value); // optimistic, so the checkbox does not feel laggy
+    const r = await fetch('/api/access', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ person: person.slug, cap, value }),
+    });
+    const j = await r.json();
+    if (!j.ok) { setErr(j.error); onChanged(cap, before); } // roll back on failure
+  }
+
+  return (
+    <tr>
+      <td colSpan={8} style={{ padding: 0 }}>
+        <div style={{ padding: '13px 16px', background: '#FAFBFC', borderTop: '1px solid var(--line2)' }}>
+          <div className="lbl" style={{ marginBottom: 9 }}>{person.name}'s access</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: '7px 20px' }}>
+            {CAPS.map(([key, label]) => (
+              <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 12.5 }}>{label}</span>
+                <AccessCell value={(perm[key] || {})[person.slug] || 'no'} onChange={(v) => set(key, v)} />
+              </div>
+            ))}
+          </div>
+          {err ? <div style={{ color: 'var(--bad)', fontSize: 12, marginTop: 9 }}>{err}</div> : null}
+          <p className="note" style={{ marginTop: 10 }}>
+            A tick is a plain yes. The … opens the in-between rights this app already uses elsewhere:
+            request (asks rather than does), comment only, an exception (allowed but recorded as one),
+            oversight only (sees it, does not approve it), or a custom note scoped to something specific.
+          </p>
+        </div>
+      </td>
+    </tr>
+  );
+}
 
 function Email({ slug, initial, canEdit, domain }) {
   const [v, setV] = useState(initial || '');
@@ -87,11 +203,21 @@ function Capacity({ rows, weekLabel }) {
   );
 }
 
-export default function Team({ rows, canEdit, domain, weekLabel }) {
+export default function Team({ rows, canEdit, canEditAccess, perm, domain, weekLabel }) {
   const [adding, setAdding] = useState(false);
   const [f, setF] = useState({ name: '', role: '', email: '', reportsTo: '' });
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  const [permState, setPermState] = useState(perm || {});
+  const [openAccess, setOpenAccess] = useState('');
+
+  function changed(slug, cap, value) {
+    setPermState((prev) => {
+      const next = { ...prev, [cap]: { ...(prev[cap] || {}) } };
+      if (!value || value === 'no') delete next[cap][slug]; else next[cap][slug] = value;
+      return next;
+    });
+  }
 
   async function send(body) {
     setBusy(true); setErr('');
@@ -132,28 +258,35 @@ export default function Team({ rows, canEdit, domain, weekLabel }) {
             <th>Person</th><th style={{ width: 210 }}>Work email</th><th style={{ width: 118 }}>Reports to</th>
             <th style={{ width: 92 }}>Open work</th><th style={{ width: 78 }}>Late</th>
             <th style={{ width: 108 }}>Waiting on them</th><th style={{ width: 150 }}>Owns</th>
-            {canEdit ? <th style={{ width: 108 }} /> : null}
+            {canEdit || canEditAccess ? <th style={{ width: 150 }} /> : null}
           </tr></thead>
           <tbody>
             {rows.map((p) => (
-              <tr key={p.slug} style={{ opacity: p.active ? 1 : 0.5 }}>
-                <td><b>{p.name}</b>{!p.active ? <span className="tag mute" style={{ marginLeft: 6 }}>inactive</span> : null}
-                  <div style={{ color: 'var(--faint)', fontSize: 12 }}>{p.role || 'no role written'}</div>
-                  </td>
-                <td><Email slug={p.slug} initial={p.email} canEdit={canEdit} domain={domain || 'creatorsnetwork.io'} /></td>
-                <td>{p.reportsToName || 'Not recorded'}</td>
-                <td>{p.open ? <b>{p.open}</b> : 'None'}</td>
-                <td>{p.late ? <span className="tag bad">{p.late}</span> : 'None'}</td>
-                <td>{p.queue ? <span className="tag warn">{p.queue}</span> : 'None'}</td>
-                <td>{(p.projects || []).length
-                  ? (p.projects || []).map((x) => <div key={x.slug} style={{ fontSize: 12.5 }}><Link href={'/projects/' + x.slug}>{x.name}</Link></div>)
-                  : <span style={{ color: 'var(--faint)' }}>nothing</span>}</td>
-                {canEdit ? <td>
-                  <button className="btn sm" disabled={busy}
-                    onClick={() => send({ action: 'edit', slug: p.slug, active: !p.active })}>
-                    {p.active ? 'Deactivate' : 'Bring back'}
-                  </button></td> : null}
-              </tr>))}
+              <Fragment key={p.slug}>
+                <tr style={{ opacity: p.active ? 1 : 0.5 }}>
+                  <td><b>{p.name}</b>{!p.active ? <span className="tag mute" style={{ marginLeft: 6 }}>inactive</span> : null}
+                    <div style={{ color: 'var(--faint)', fontSize: 12 }}>{p.role || 'no role written'}</div>
+                    </td>
+                  <td><Email slug={p.slug} initial={p.email} canEdit={canEdit} domain={domain || 'creatorsnetwork.io'} /></td>
+                  <td>{p.reportsToName || 'Not recorded'}</td>
+                  <td>{p.open ? <b>{p.open}</b> : 'None'}</td>
+                  <td>{p.late ? <span className="tag bad">{p.late}</span> : 'None'}</td>
+                  <td>{p.queue ? <span className="tag warn">{p.queue}</span> : 'None'}</td>
+                  <td>{(p.projects || []).length
+                    ? (p.projects || []).map((x) => <div key={x.slug} style={{ fontSize: 12.5 }}><Link href={'/projects/' + x.slug}>{x.name}</Link></div>)
+                    : <span style={{ color: 'var(--faint)' }}>nothing</span>}</td>
+                  {canEdit || canEditAccess ? <td style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {canEditAccess ? <button className="btn sm" onClick={() => setOpenAccess(openAccess === p.slug ? '' : p.slug)}>
+                      {openAccess === p.slug ? 'Hide access' : 'Access'}
+                    </button> : null}
+                    {canEdit ? <button className="btn sm" disabled={busy}
+                      onClick={() => send({ action: 'edit', slug: p.slug, active: !p.active })}>
+                      {p.active ? 'Deactivate' : 'Bring back'}
+                    </button> : null}
+                  </td> : null}
+                </tr>
+                {openAccess === p.slug ? <AccessPanel person={p} perm={permState} onChanged={(cap, v) => changed(p.slug, cap, v)} /> : null}
+              </Fragment>))}
           </tbody>
         </table>
         <div style={{ padding: '10px 16px', borderTop: '1px solid var(--line2)', fontSize: 12.5, color: 'var(--faint)' }}>
