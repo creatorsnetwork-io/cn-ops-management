@@ -6,7 +6,8 @@
     "dev": "next dev -p 3300",
     "build": "next build",
     "start": "next start -p 3300",
-    "seed": "node scripts/seed.mjs"
+    "seed": "node scripts/seed.mjs",
+    "migrate-brand": "node scripts/migrate-brand-to-client.mjs"
   },
   "dependencies": {
     "@sanity/client": "^6.21.3",

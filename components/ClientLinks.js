@@ -47,6 +47,7 @@ export default function ClientLinks({ rows, shares, canRevoke }) {
     type: 'client', token: r.clientToken, client: r.client, project: r.projectName,
     what: 'Week of ' + dayOf(r.week), sent: r.sharedAt, by: r.by,
     url: '/c/' + r.clientToken, expiry: 'When the week closes', source: r,
+    firstOpenedAt: r.firstOpenedAt, lastOpenedAt: r.lastOpenedAt,
     activity: (r.approved || 0) + (r.changes || 0)
       ? [r.approved ? r.approved + ' approved' : '', r.changes ? r.changes + ' changes' : ''].filter(Boolean).join(', ')
       : 'No decision yet',
@@ -55,6 +56,7 @@ export default function ClientLinks({ rows, shares, canRevoke }) {
     type: 'share', token: r.token, client: r.client, project: r.projectName,
     what: (r.kind === 'brief' ? 'Job brief: ' : 'Call sheet: ') + r.title,
     sent: r.at, by: r.by, url: '/s/' + r.token, expiry: 'When the work closes', source: r,
+    firstOpenedAt: r.firstOpenedAt, lastOpenedAt: r.lastOpenedAt,
     activity: (r.responses || []).length ? (r.responses || []).length + ' repl' + ((r.responses || []).length === 1 ? 'y' : 'ies') : 'No reply yet',
   })));
 
@@ -64,7 +66,7 @@ export default function ClientLinks({ rows, shares, canRevoke }) {
       <table>
         <thead><tr>
           <th>Client</th><th>What</th><th>URL</th><th>Sent</th><th>By</th>
-          <th>Opens</th><th>Last open</th><th>Expiry</th><th>State</th><th />
+          <th>First opened</th><th>Last opened</th><th>Expiry</th><th>State</th><th />
         </tr></thead>
         <tbody>
           {all.map((r) => {
@@ -76,8 +78,8 @@ export default function ClientLinks({ rows, shares, canRevoke }) {
                 <td className="dim" style={{ wordBreak: 'break-all', fontSize: 11.5 }}>{r.url}</td>
                 <td className="dim">{when(r.sent) || 'Not recorded'}</td>
                 <td className="dim">{r.by || 'Not recorded'}</td>
-                <td className="dim">Not tracked</td>
-                <td className="dim">Not tracked</td>
+                <td className="dim">{r.firstOpenedAt ? when(r.firstOpenedAt) : 'Not opened yet'}</td>
+                <td className="dim">{r.lastOpenedAt ? when(r.lastOpenedAt) : 'Not opened yet'}</td>
                 <td className="dim">{r.expiry}</td>
                 <td><span className="tag ok">Live</span></td>
                 <td>
@@ -99,7 +101,7 @@ export default function ClientLinks({ rows, shares, canRevoke }) {
     </div>
 
     <div className="callout">
-      <span><b>Open telemetry is not stored yet.</b> Decisions and replies are real activity, but neither proves when a link was opened. The register labels those fields as not tracked instead of guessing.</span>
+      <span><b>Open telemetry is first and last open only.</b> Every visit to the public link updates last opened; nothing per-visit is logged, and decisions or replies remain the real activity record.</span>
     </div>
     <p className="note">Links carry no commercial data. Revoking a link removes public access immediately while keeping decisions and replies in the operational record.</p>
     </>

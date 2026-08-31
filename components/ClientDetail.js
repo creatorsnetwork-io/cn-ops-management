@@ -180,6 +180,7 @@ export default function ClientDetail({ c, onb, canEdit, links, who }) {
                   : (onb.byHand.includes(i) && canEdit
                       ? <button className="btn sm dark" onClick={() => tick(i, true)}>Sign it off</button>
                       : <span className="tag mute">Waiting on the work</span>)}
+                {i === 2 ? <Link className="btn sm" href={'/brand?client=' + c.slug} style={{ marginLeft: 6 }}>Open</Link> : null}
               </div>))}
             <div style={{ padding: '11px 15px', borderTop: '1px solid var(--line2)', fontSize: 12.5, color: 'var(--faint)' }}>
               These are not hard gates yet. They tell you what is missing and what it costs. Turning

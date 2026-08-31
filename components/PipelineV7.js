@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 const STAGE = {
-  lead: ['Intro made', 'mute'], talking: ['Discovery', 'info'], proposal: ['Proposal sent', 'warn'],
+  lead: ['Intro made', 'mute'], meeting: ['First meeting', 'info'], talking: ['Discovery', 'info'],
+  proposal: ['Proposal sent', 'warn'], quoted: ['Quoted', 'warn'],
   won: ['Won', 'ok'], lost: ['Lost', 'mute'],
 };
 const dayOf = (d) => (d ? new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : 'Not set');
@@ -98,7 +99,6 @@ export default function PipelineV7({ people }) {
       </div>
       {!d && !err ? <div className="panel"><div className="pad note">Loading the pipeline.</div></div> : null}
       {err && !adding ? <div className="alertbar">{err}</div> : null}
-      <p className="note">The live prospect API stores five states. First meeting and Quoted remain visible in the seven-stage operating model but cannot be persisted separately yet.</p>
-    </>
+          </>
   );
 }

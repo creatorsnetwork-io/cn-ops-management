@@ -69,7 +69,7 @@ export default async function Project({ params, searchParams }) {
         `*[_type=="project" && slug==$s][0]{
         _id,slug,name,type,cadence,status,subtitle,term,timeline,stage,ideasDoc,ideasLink,
         calendarSources,deliverables,contract,milestones,prd,voice,
-        "client":client->{name,code,driveFolderId},"owner":owner->{name},
+        "client":client->{name,code,slug,driveFolderId,brand},"owner":owner->{name},
         ${activeTab === 'work' ? '"people": *[_type=="person" && active==true]|order(name asc){slug,name},' : ''}
         ${activeTab === 'activity' ? '"escalations": *[_type=="escalation" && project->slug == ^.slug]{_id},' : ''}
         "workCount": count(*[_type=="work" && references(^._id)]),

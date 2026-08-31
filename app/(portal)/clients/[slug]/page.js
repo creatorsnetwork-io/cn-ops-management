@@ -25,7 +25,7 @@ export default async function Page({ params }) {
     c = await sanity(true).fetch(
       `*[_type=="client" && slug==$s][0]{
         slug, name, note, driveFolderId, logoUrl, contacts, obligations, onbManual,
-        channel, turnaround, renewal, clientType, industry, businessType,
+        channel, turnaround, renewal, clientType, industry, businessType, brand,
         "projects": *[_type=="project" && references(^._id)]|order(name asc){
           slug, name, type, status, voice, prd, contract, deliverables,
           "owner": owner->name, "cals": count(calendarSources[current==true]),

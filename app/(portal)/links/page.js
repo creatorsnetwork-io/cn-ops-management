@@ -17,14 +17,14 @@ export default async function Links() {
       Promise.all([
         sanity(true).fetch(
           `*[_type=="weekReview" && defined(clientToken)]|order(week desc)[0...80]{
-          _id, week, projectSlug, clientToken, sharedAt, clientDecisions,
+          _id, week, projectSlug, clientToken, sharedAt, clientDecisions, firstOpenedAt, lastOpenedAt,
           "projectName": project->name, "client": project->client->name }`),
         sanity(true).fetch(
           `*[_type=="activity" && what in ["Created the client link","Reopened the client link"]]|order(at desc){target,who}`),
       ]).then(([raw, activity]) => ({ raw, activity })).catch((e) => ({ error: e })),
       sanity(true).fetch(
         `*[_type=="share" && revoked != true]|order(at desc)[0...80]{
-        token, kind, at, by, responses, workId,
+        token, kind, at, by, responses, workId, firstOpenedAt, lastOpenedAt,
         "title": work->title, "projectName": work->project->name, "client": work->project->client->name}`)
         .catch(() => []),
     ]);

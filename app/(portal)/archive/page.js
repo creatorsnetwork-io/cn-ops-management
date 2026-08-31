@@ -18,7 +18,7 @@ export default async function Archive() {
     [projects, weeks, work, requests, escalations] = await Promise.all([
       sanity(true).fetch(
         `*[_type=="project" && status in ["closed","archived","inactive"]]|order(_updatedAt desc){
-        slug,name,type,closedAt,
+        slug,name,type,closedAt,closedBy,closedReason,
         "client":client->name,
         "approved":count(*[_type=="work" && project._ref==^._id && state in ["approved","done"]]),
         "workTotal":count(*[_type=="work" && project._ref==^._id])}`),
@@ -70,7 +70,7 @@ export default async function Archive() {
                 <td className="b">{p.client || 'Not recorded'}</td>
                 <td>{p.name}</td>
                 <td className="dim">{typeName[p.type] || p.type || 'Not recorded'}</td>
-                <td className="dim">{p.closedAt ? when(p.closedAt) : 'Date not recorded'}</td>
+                <td className="dim">{p.closedAt ? when(p.closedAt) + (p.closedBy ? ', by ' + p.closedBy : '') : 'Date not recorded'}{p.closedReason ? <div style={{ color: 'var(--faint)', fontSize: 12 }}>{p.closedReason}</div> : null}</td>
                 <td className="dim">{p.approved} of {p.workTotal} work items approved</td>
                 <td className="rowb">
                   <Link className="btn sm" href={'/projects/' + p.slug + '/pack'}>Dispute pack</Link>
@@ -80,7 +80,7 @@ export default async function Archive() {
             {projects.length === 0 ? <tr><td colSpan={6} className="dim">No project has a closed or archived status yet.</td></tr> : null}
           </tbody>
         </table>
-        <div className="pad" style={{ borderTop: '1px solid var(--line2)' }}><p className="note">The current project API cannot close a project or record a closure date. Existing non-active projects appear here; no closure values are invented.</p></div>
+        <div className="pad" style={{ borderTop: '1px solid var(--line2)' }}><p className="note">Closing a project from its page records the date, who closed it and why. Existing non-active projects appear here even if closed before this existed; no closure values are invented for those.</p></div>
       </div>
 
       <details style={{ marginTop: 16 }}>

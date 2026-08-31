@@ -7,7 +7,7 @@ export const revalidate = 0;
 export async function GET(req, { params }) {
   const s = await sanity(true).fetch(
     `*[_type=="share" && token==$t][0]{
-      _id, kind, at, note, revoked, responses, workId,
+      _id, kind, at, note, revoked, responses, workId, firstOpenedAt, lastOpenedAt,
       "work": work->{title, kind, brief, acceptance, driveLink, docLink, due, callSheet, state,
                      "projectName": project->name, "client": project->client->name}}`,
     { t: params.token });
@@ -15,6 +15,10 @@ export async function GET(req, { params }) {
   if (!s) return Response.json({ ok: false, error: 'This link is not valid. Ask your contact at Creators Network for a new one.' }, { status: 404 });
   if (s.revoked) return Response.json({ ok: false, error: 'This link has been withdrawn.' }, { status: 403 });
   if (!s.work) return Response.json({ ok: false, error: 'The job behind this link is gone.' }, { status: 404 });
+
+  // First and last open, nothing per-open. A visit to the public side is the only honest signal.
+  const now = new Date().toISOString();
+  await sanity(true).patch(s._id).set({ lastOpenedAt: now, firstOpenedAt: s.firstOpenedAt || now }).commit();
 
   const w = s.work;
   const base = { ok: true, kind: s.kind, note: s.note, client: w.client, project: w.projectName, title: w.title, due: w.due,

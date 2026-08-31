@@ -7,7 +7,7 @@ export const maxDuration = 120;
 
 async function findReview(token) {
   return sanity(true).fetch(
-    `*[_type=="weekReview" && clientToken==$t][0]{_id,projectSlug,week,shipGate,clientDecisions,
+    `*[_type=="weekReview" && clientToken==$t][0]{_id,projectSlug,week,shipGate,clientDecisions,firstOpenedAt,lastOpenedAt,
       "project":project->{name,"client":client->name,"clientLogo":client->logoUrl}}`, { t: token });
 }
 
@@ -32,6 +32,10 @@ export async function GET(req, { params }) {
 
   const byKey = {};
   for (const d of r.clientDecisions || []) byKey[d.key] = d;
+
+  // First and last open, nothing per-open. A visit to the public side is the only honest signal.
+  const now = new Date().toISOString();
+  await sanity(true).patch(r._id).set({ lastOpenedAt: now, firstOpenedAt: r.firstOpenedAt || now }).commit();
 
   return Response.json({
     ok: true, client: r.project?.client, clientLogo: r.project?.clientLogo || '', project: r.project?.name, week: r.week,

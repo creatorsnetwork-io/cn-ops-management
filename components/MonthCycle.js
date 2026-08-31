@@ -75,6 +75,11 @@ export default function MonthCycle({ slug }) {
           </div>
 
           <div className="row">
+            <span className={'dot ' + (cy.reportLink ? 'ok' : 'no')} />
+            <div className="t"><b>Report linked</b>
+              <span>{cy.reportLink ? (cy.reportLinkBy ? 'Added by ' + cy.reportLinkBy + ' on ' + when(cy.reportLinkAt) : 'Link saved') : 'Not linked yet'}</span></div>
+          </div>
+          <div className="row">
             <span className={'dot ' + (shipped ? 'ok' : 'no')} />
             <div className="t"><b>Signed off</b>
               <span>{shipped ? 'By ' + cy.shipGate.by + ' on ' + when(cy.shipGate.at)

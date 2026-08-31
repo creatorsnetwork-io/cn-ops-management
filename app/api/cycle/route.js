@@ -47,7 +47,17 @@ export async function POST(req) {
 
     if (b.action === 'save') {
       const patch = {};
-      if (typeof b.reportLink === 'string') patch.reportLink = b.reportLink.slice(0, 500);
+      if (typeof b.reportLink === 'string') {
+        const link = b.reportLink.slice(0, 500);
+        const cur = await loadCycle(b.slug, month);
+        if (link !== (cur?.reportLink || '')) {
+          patch.reportLink = link;
+          patch.reportLinkAt = link ? now : null;
+          patch.reportLinkBy = link ? who : null;
+        } else {
+          patch.reportLink = link;
+        }
+      }
       if (typeof b.notes === 'string') patch.notes = b.notes.slice(0, 4000);
       if (!Object.keys(patch).length) return Response.json({ ok: false, error: 'Nothing to change.' }, { status: 400 });
       await c.patch(id).set(patch).commit();

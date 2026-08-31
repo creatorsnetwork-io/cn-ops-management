@@ -1,7 +1,7 @@
 import { sanity } from '../../../../lib/sanity';
 import { meSlug } from '../../../../lib/me';
 import { can } from '../../../../lib/perm';
-import { forgetProject } from '../../../../lib/week';
+import { forgetProject, log } from '../../../../lib/week';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -9,6 +9,24 @@ export const revalidate = 0;
 export async function PATCH(req, { params }) {
   const who = meSlug();
   const body = await req.json();
+
+  // Closing is its own thing, not a field edit: it needs a reason, a
+  // permission of its own, and never reopens what it just closed.
+  if (body.close) {
+    if (can(who, 'closeProject') !== 'yes')
+      return Response.json({ ok: false, error: 'Only Himanshu or Aashif can close a project.' }, { status: 403 });
+    const reason = String(body.close.reason || '').trim();
+    if (!reason)
+      return Response.json({ ok: false, error: 'Write why this is closing now. That is the part of a closure worth keeping.' }, { status: 400 });
+
+    const now = new Date().toISOString();
+    const doc = await sanity(true).patch('project.' + params.slug)
+      .set({ status: 'closed', closedAt: now, closedBy: who, closedReason: reason.slice(0, 600) })
+      .commit();
+    forgetProject(params.slug);
+    await log(who, 'Closed the project', 'project.' + params.slug, reason.slice(0, 600));
+    return Response.json({ ok: true, project: doc });
+  }
 
   if ('calendarSources' in body && can(who, 'editCalendarSources') !== 'yes') {
     return Response.json({ ok: false, error: 'Only Himanshu and Aashif can change calendar links.' }, { status: 403 });

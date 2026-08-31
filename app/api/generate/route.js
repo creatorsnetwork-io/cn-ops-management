@@ -4,6 +4,7 @@ import { can } from '../../../lib/perm';
 import { readProjectWeek, log } from '../../../lib/week';
 import { chat, HOUSE, LIMITS_TEXT } from '../../../lib/ai';
 import { checkWeekImages } from '../../../lib/imagecheck';
+import { brandBlock } from '../../../lib/brand';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -39,7 +40,9 @@ function pickCaption(parsed, channel) {
 
 async function voiceOf(slug) {
   const p = await sanity(true).fetch(
-    `*[_type=="project" && slug==$s][0]{name,voice,extraBanned,"client":client->{name,note}}`, { s: slug });
+    // Brand lives on the client, shared across all of that client's projects.
+    // Voice stays per project, it is a narrower note than the brand brain.
+    `*[_type=="project" && slug==$s][0]{name,voice,extraBanned,"client":client->{name,note,brand}}`, { s: slug });
   return p || {};
 }
 
@@ -49,6 +52,11 @@ function voiceBlock(p) {
   lines.push('Project: ' + (p.name || 'unknown'));
   if (p.voice) lines.push('How this client sounds:\n' + p.voice);
   else lines.push('No voice has been written for this client yet. Stay neutral, plain and specific, and do not invent a personality.');
+  // The brand brain, when one has been filled in. Lives on the client, so
+  // every project under them reads the same one. Additive to the note above,
+  // not a replacement for it.
+  const bb = brandBlock(p.client);
+  if (bb) lines.push('Brand brain:\n' + bb);
   if ((p.extraBanned || []).length) lines.push('Words this client has banned: ' + p.extraBanned.join(', '));
   return lines.join('\n');
 }

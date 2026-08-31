@@ -3,8 +3,8 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 const STAGES = ['Intro made', 'First meeting', 'Discovery', 'Proposal sent', 'Quoted', 'Won', 'Lost'];
-const INDEX = { lead: 0, talking: 2, proposal: 3, won: 5, lost: 6 };
-const NEXT = { lead: 'talking', talking: 'proposal', proposal: 'won' };
+const INDEX = { lead: 0, meeting: 1, talking: 2, proposal: 3, quoted: 4, won: 5, lost: 6 };
+const NEXT = { lead: 'meeting', meeting: 'talking', talking: 'proposal', proposal: 'quoted', quoted: 'won' };
 const dayOf = (d) => d ? new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', timeZone: 'UTC' }) : 'Not set';
 
 export default function ProspectDetail({ id }) {
@@ -55,7 +55,7 @@ export default function ProspectDetail({ id }) {
 
       {err ? <div className="alertbar">{err}</div> : null}
 
-      <div className="panel"><header><h2>Stage</h2></header><div className="stepper">{STAGES.map((s, i) => <div className={'st ' + (i < idx ? 'done' : i === idx ? 'now' : '')} key={s}><div className="cir">{i < idx ? '✓' : i + 1}</div><div className="bar" /><div className="lb">{s}</div></div>)}</div><div className="pad" style={{ borderTop: '1px solid var(--line2)' }}><p className="note">First meeting and Quoted are not separate values in the live API, so advancing follows its five stored states.</p></div></div>
+      <div className="panel"><header><h2>Stage</h2></header><div className="stepper">{STAGES.map((s, i) => <div className={'st ' + (i < idx ? 'done' : i === idx ? 'now' : '')} key={s}><div className="cir">{i < idx ? '✓' : i + 1}</div><div className="bar" /><div className="lb">{s}</div></div>)}</div><div className="pad" style={{ borderTop: '1px solid var(--line2)' }}><p className="note">Advancing moves one stage at a time.</p></div></div>
 
       <div className="grid2">
         <div className="panel"><header><h2>Notes</h2></header><div className="pad">

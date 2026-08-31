@@ -10,6 +10,14 @@ import ProjectIdeas from './ProjectIdeas';
 import ProjectTabs from './ProjectTabs';
 import { KINDS, LABEL, TAG, verbsFor, canAssign, isLate } from '../lib/work';
 
+// The brand brain lives on the client now, shared by every project under it.
+function hasBrand(b) {
+  if (!b) return false;
+  return !!(String(b.positioning || '').trim() || String(b.visual || '').trim()
+    || (b.voiceIs || []).length || (b.voiceIsNot || []).length
+    || (b.neverSay || []).length || (b.always || []).length);
+}
+
 const TYPE = { social: 'Social retainer', website: 'Website', seo: 'SEO', influencer: 'Influencer', video: 'Video', aiVideo: 'AI video', events: 'Event' };
 const STAGES = {
   social: ['Plan', 'Ideas', 'Copy', 'Creative', 'QC', 'Client', 'Approved', 'Posted'],
@@ -78,6 +86,10 @@ export default function ProjectDetail({ p, activity, perms, activeTab, who }) {
   const [work, setWork] = useState(p.work || []);
   const [workNote, setWorkNote] = useState({});
   const [workBusy, setWorkBusy] = useState('');
+  const [closing, setClosing] = useState(false);
+  const [closeReason, setCloseReason] = useState('');
+  const [closeBusy, setCloseBusy] = useState(false);
+  const [closeErr, setCloseErr] = useState('');
   const stages = STAGES[p.type] || ['Plan', 'Production', 'Client', 'Approved'];
   const stageIndex = p.stage === 'Closed' ? stages.length : Math.max(0, stages.indexOf(p.stage));
   const latestReview = (p.reviews || [])[0];
@@ -105,6 +117,17 @@ export default function ProjectDetail({ p, activity, perms, activeTab, who }) {
     else setWorkNote((prev) => ({ ...prev, [id]: j.error }));
   }
 
+  async function closeProject() {
+    setCloseBusy(true); setCloseErr('');
+    const r = await fetch('/api/project/' + p.slug, {
+      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ close: { reason: closeReason } }),
+    });
+    const j = await r.json(); setCloseBusy(false);
+    if (j.ok) window.location.href = '/archive';
+    else setCloseErr(j.error);
+  }
+
   return (
     <>
       <div className="head">
@@ -118,9 +141,24 @@ export default function ProjectDetail({ p, activity, perms, activeTab, who }) {
           {p.type === 'social' && perms.canShare
             ? <Link className="btn" href={'/projects/' + p.slug + '/review' + (latestReview?.week ? '?week=' + latestReview.week : '')}>Share client link</Link> : null}
           <Link className="btn" href={contractUrl}>Contract</Link>
-          {perms.canClose ? <button className="btn off" disabled title="The live API does not expose project closure yet.">Close project</button> : null}
+          {perms.canClose && !closing ? <button className="btn off" onClick={() => setClosing(true)}>Close project</button> : null}
         </div>
       </div>
+
+      {closing ? (
+        <div className="panel">
+          <header><h2>Close this project</h2></header>
+          <div className="pad">
+            <p className="note">Deliverables reconciled, final files linked and a dispute pack generated are what closing is meant to mean, ahead of relying on the archive record. Write why this is closing now.</p>
+            <textarea value={closeReason} onChange={(e) => setCloseReason(e.target.value)} placeholder="Why is this closing now" />
+            {closeErr ? <div className="alertbar">{closeErr}</div> : null}
+            <div className="rowb" style={{ marginTop: 10 }}>
+              <button className="btn dark" disabled={closeBusy || !closeReason.trim()} onClick={closeProject}>Confirm close</button>
+              <button className="btn" onClick={() => { setClosing(false); setCloseReason(''); setCloseErr(''); }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="stats">
         <div><div className="lbl">Current stage</div><div className="v">{p.stage}</div><div className="s">Owner {p.owner?.name || 'not assigned'}</div></div>
@@ -145,7 +183,7 @@ export default function ProjectDetail({ p, activity, perms, activeTab, who }) {
           <div className="srcs">
             <div className="src"><div className="ic">▤</div><div className="tx"><div className="lbl">Contract</div><div className="v">{p.contract?.filename || 'Not uploaded'}</div><div className="s">Deliverable baseline and source agreement</div></div><Link className="btn sm" href={contractUrl}>Open</Link></div>
             <div className="src"><div className="ic">◫</div><div className="tx"><div className="lbl">Project brief / PRD</div><div className="v">{p.prd ? 'Working document ready' : 'Not started'}</div><div className="s">Versioned requirements</div></div><Link className="btn sm" href={'/projects/' + p.slug + '/prd'}>Open</Link></div>
-            <div className="src"><div className="ic">✦</div><div className="tx"><div className="lbl">Client brand brain</div><div className="v">{p.voice ? 'Voice context written' : 'Context missing'}</div><div className="s">Managed separately from this round</div></div></div>
+            <div className="src"><div className="ic">✦</div><div className="tx"><div className="lbl">Client brand brain</div><div className="v">{hasBrand(p.client?.brand) ? 'Filled in' : (p.voice ? 'Voice note only' : 'Context missing')}</div><div className="s">Lives on the client, shared by every one of their projects</div></div><Link className="btn sm" href={'/brand' + (p.client?.slug ? '?client=' + p.client.slug : '')}>Open</Link></div>
             <div className="src"><div className="ic">↗</div><div className="tx"><div className="lbl">Client Drive</div><div className="v">{p.client?.driveFolderId ? p.client.code + ' folder' : 'Not linked'}</div><div className="s">Working files stay in Google Drive</div></div>{p.client?.driveFolderId ? <a className="btn sm" href={'https://drive.google.com/drive/folders/' + p.client.driveFolderId} target="_blank" rel="noreferrer">Open</a> : null}</div>
             <div className="src"><div className="ic">⌁</div><div className="tx"><div className="lbl">Record of approvals</div><div className="v">Append-only evidence pack</div><div className="s">What the client saw, said and approved</div></div><Link className="btn sm" href={'/projects/' + p.slug + '/pack'}>Open</Link></div>
           </div>

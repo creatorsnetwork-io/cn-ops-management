@@ -29,7 +29,7 @@ export default async function Clients() {
     const [raw, person] = await Promise.all([
       sanity(true).fetch(
         `*[_type=="client" && active != false]|order(name asc){
-        slug, name, code, note, driveFolderId, logoUrl, contacts, onbManual,
+        slug, name, code, note, driveFolderId, logoUrl, contacts, onbManual, brand,
         renewal, clientType, industry, businessType,
         "projects": *[_type=="project" && references(^._id)]{
           slug, type, voice, prd, contract, deliverables,

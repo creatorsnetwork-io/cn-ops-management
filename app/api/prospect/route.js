@@ -5,7 +5,7 @@ import { log } from '../../../lib/week';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const STAGES = ['lead', 'talking', 'proposal', 'won', 'lost'];
+const STAGES = ['lead', 'meeting', 'talking', 'proposal', 'quoted', 'won', 'lost'];
 const OPS = ['himanshu', 'aashif'];
 const P = `{_id,name,market,service,stage,valueAed,nextStep,nextStepDate,source,notes,at,
   decidedAt,outcome,"ownerName":owner->name,"owner":owner->slug}`;
