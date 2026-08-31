@@ -1,6 +1,5 @@
 import { sanity } from '../../lib/sanity';
-import { scopeOf } from '../../lib/perm';
-import { KINDS, LABEL, scopeFilter } from '../../lib/work';
+import { KINDS, LABEL, scopeFilter, workPerms } from '../../lib/work';
 
 const TYPE = {
   social: 'Social retainer', website: 'Website', seo: 'SEO', influencer: 'Influencer campaign',
@@ -57,9 +56,10 @@ export async function buildSearchIndex(who, visibleHrefs) {
   }
 
   if (visibleHrefs.has('/work')) {
-    const s = scopeOf(who);
+    const perms = await workPerms(who);
+    const s = perms.scope;
     const tab = s.all || (s.people || []).length > 1 ? 'all' : 'mine';
-    for (const w of scopeFilter(d.work || [], who, tab)) {
+    for (const w of scopeFilter(d.work || [], who, tab, perms)) {
       add(items, 'Work item', w.title,
         clean([w.client, w.projectName, LABEL[w.state], w.assigneeName || 'Nobody']), '/work/' + w._id,
         [w.brief, w.deliverable, w.kind, KINDS[w.kind]?.label, w.state, w.assigneeName],

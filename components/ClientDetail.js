@@ -18,7 +18,7 @@ const RIGHTS = [
   ['The baseline', 'Himanshu and Aashif edit it, everyone else asks'],
 ];
 
-export default function ClientDetail({ c, onb, canEdit, links, who }) {
+export default function ClientDetail({ c, onb, canEdit, links, who, addShade }) {
   const [contacts, setContacts] = useState(c.contacts || []);
   const [ob, setOb] = useState(c.obligations || []);
   const [f, setF] = useState({
@@ -78,7 +78,7 @@ export default function ClientDetail({ c, onb, canEdit, links, who }) {
         </div>
         <div className="rowb">
           {c.driveFolderId ? <a className="btn" target="_blank" rel="noreferrer" href={'https://drive.google.com/drive/folders/' + c.driveFolderId}>Drive</a> : null}
-          <PermButton who={who} cap="createProject" label="Add project" dark
+          <PermButton shade={addShade} label="Add project" dark
             onClick={() => { window.location.href = '/projects?add=1&client=' + encodeURIComponent(c.slug); }}
             onRequest={() => { window.location.href = '/projects?add=1&client=' + encodeURIComponent(c.slug); }} />
           <Link className="btn" href="/clients">All clients</Link>

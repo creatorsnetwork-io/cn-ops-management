@@ -19,7 +19,7 @@ const LIMITS = [
 
 export default async function Page() {
   const who = meSlug();
-  if (!pageAllowed(who, '/settings')) return <NotYours what="Settings" />;
+  if (!(await pageAllowed(who, '/settings'))) return <NotYours what="Settings" />;
 
   let house = { bannedPhrases: [], digestHour: 8 }, projects = [], error = null;
   try {
@@ -30,6 +30,8 @@ export default async function Page() {
     if (s) house = s;
     projects = rows;
   } catch (e) { error = e.message; }
+
+  const canEdit = (await can(who, 'settings')) === 'yes';
 
   return (
     <>
@@ -42,7 +44,7 @@ export default async function Page() {
         <div className="rowb"><Link className="btn" href="/mobile">Mobile scope</Link><Link className="btn dark" href="/setup">Connections</Link></div>
       </div>
       {error ? <div className="alertbar">Sanity did not answer. <code>{error}</code></div> : null}
-      <Settings house={house} projects={projects} limits={LIMITS} builtIn={BANNED} canEdit={can(who, 'settings') === 'yes'} />
+      <Settings house={house} projects={projects} limits={LIMITS} builtIn={BANNED} canEdit={canEdit} />
     </>
   );
 }

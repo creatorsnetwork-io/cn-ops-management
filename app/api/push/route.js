@@ -16,7 +16,7 @@ export const maxDuration = 120;
 
 export async function POST(req) {
   const who = meSlug();
-  if (can(who, 'generate') === 'no')
+  if ((await can(who, 'generate')) === 'no')
     return Response.json({ ok: false, error: 'Your role does not write into calendars.' }, { status: 403 });
 
   const b = await req.json();

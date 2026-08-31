@@ -18,8 +18,8 @@ export const maxDuration = 180;
 // Unlike Settings, which is Himanshu and Aashif exclusively, this checks that
 // dedicated permission rather than the admin one, and logs the shade an edit
 // came in under so an exception or an oversight save is visible on the record.
-function shadeOf(who) {
-  const v = can(who, 'approveBrand');
+async function shadeOf(who) {
+  const v = await can(who, 'approveBrand');
   return ['himanshu', 'aashif', 'priyanka', 'gowtham'].includes(who) && v !== 'no' ? v : '';
 }
 
@@ -38,7 +38,7 @@ async function extractAndRespond({ text, how, filename, slug, who, shade, c }) {
 
 export async function POST(req) {
   const who = meSlug();
-  const shade = shadeOf(who);
+  const shade = await shadeOf(who);
   if (!shade) return Response.json({ ok: false, error: 'Your role does not edit the brand brain.' }, { status: 403 });
 
   const ct = req.headers.get('content-type') || '';

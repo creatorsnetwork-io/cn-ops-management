@@ -23,7 +23,7 @@ const TYPES = {
 export async function POST(req) {
   const who = meSlug();
   const b = await req.json();
-  const right = can(who, 'createProject');
+  const right = await can(who, 'createProject');
 
   if (right === 'no')
     return Response.json({ ok: false, error: 'Your role does not open projects.' }, { status: 403 });
@@ -74,7 +74,7 @@ export async function POST(req) {
 // attached, so this can never be a way to lose history.
 export async function DELETE(req) {
   const who = meSlug();
-  if (can(who, 'closeProject') !== 'yes')
+  if ((await can(who, 'closeProject')) !== 'yes')
     return Response.json({ ok: false, error: 'Only Himanshu or Aashif can remove a project.' }, { status: 403 });
   const slug = new URL(req.url).searchParams.get('slug');
   if (!slug) return Response.json({ ok: false, error: 'Which project.' }, { status: 400 });

@@ -36,14 +36,19 @@ async function freshRules(slug) {
   return (p && p.qcRules) || [];
 }
 
-function perms(who) {
+async function perms(who) {
+  const [craft, ship, share, generate, shipOverride, triageFeedback] = await Promise.all([
+    can(who, 'approveCraft'),
+    can(who, 'shipGate'),
+    can(who, 'shareClientLink'),
+    can(who, 'generate'),
+    can(who, 'shipOverride'),
+    can(who, 'triageFeedback'),
+  ]);
   return {
-    who,
-    craft: can(who, 'approveCraft'),
-    ship: can(who, 'shipGate'),
-    share: can(who, 'shareClientLink'),
-    canCraft: ['yes', 'exception', 'oversight'].includes(can(who, 'approveCraft')),
-    canShip: ['yes', 'exception', 'oversight'].includes(can(who, 'shipGate')),
+    who, craft, ship, share, generate, shipOverride, triageFeedback,
+    canCraft: ['yes', 'exception', 'oversight'].includes(craft),
+    canShip: ['yes', 'exception', 'oversight'].includes(ship),
   };
 }
 
@@ -91,7 +96,7 @@ export async function GET(req) {
     const review = await loadReview(slug, w.week);
     return Response.json({
       ok: true, project: w.project, source: w.source, sheetTitle: w.sheetTitle, tab: w.tab,
-      perms: perms(who), qcRules: await freshRules(slug), ...shape(review, w.week, w.items),
+      perms: await perms(who), qcRules: await freshRules(slug), ...shape(review, w.week, w.items),
     });
   } catch (e) {
     return Response.json({ ok: false, error: (e.message || String(e)).slice(0, 220) });
@@ -104,7 +109,7 @@ export async function POST(req) {
   const { slug, week, action } = body;
   if (!slug || !week || !action) return Response.json({ ok: false, error: 'Missing details.' }, { status: 400 });
 
-  const p = perms(who);
+  const p = await perms(who);
   const id = reviewId(slug, week);
   const c = sanity(true);
 
@@ -140,7 +145,7 @@ export async function POST(req) {
 
     // "Not required." Either this one row, or a standing rule for this kind of post.
     else if (action === 'waive' || action === 'unwaive') {
-      if (!softYes(can(who, 'approveCraft')) && !softYes(can(who, 'shipGate')) && !softYes(can(who, 'triageFeedback')))
+      if (!softYes(await can(who, 'approveCraft')) && !softYes(await can(who, 'shipGate')) && !softYes(await can(who, 'triageFeedback')))
         return Response.json({ ok: false, error: 'Your role does not decide what is required.' }, { status: 403 });
 
       const r = await loadReview(slug, week);
@@ -227,9 +232,9 @@ export async function POST(req) {
     }
 
     else if (action === 'ship') {
-      if (!p.canShip && !(body.override && softYes(can(who, 'shipOverride'))))
+      if (!p.canShip && !(body.override && softYes(await can(who, 'shipOverride'))))
         return Response.json({ ok: false, error: 'You cannot sign the ship gate.' }, { status: 403 });
-      if (body.override && !softYes(can(who, 'shipOverride')))
+      if (body.override && !softYes(await can(who, 'shipOverride')))
         return Response.json({ ok: false, error: 'Sending with flags open is limited to Himanshu, Aashif and Priyanka.' }, { status: 403 });
       const r = await loadReview(slug, week);
       if (!r.craftGate) return Response.json({ ok: false, error: 'The craft gate is not signed yet.' });
@@ -251,7 +256,7 @@ export async function POST(req) {
     }
 
     else if (action === 'share') {
-      if (!['yes'].includes(can(who, 'shareClientLink'))) return Response.json({ ok: false, error: 'You cannot share client links.' }, { status: 403 });
+      if (!['yes'].includes(await can(who, 'shareClientLink'))) return Response.json({ ok: false, error: 'You cannot share client links.' }, { status: 403 });
       const r = await loadReview(slug, week);
       if (!r.shipGate) return Response.json({ ok: false, error: 'Sign the ship gate before sharing with the client.' });
       const token = r.clientToken || (globalThis.crypto.randomUUID().replace(/-/g, '') + globalThis.crypto.randomUUID().replace(/-/g, '')).slice(0, 24);
@@ -260,7 +265,7 @@ export async function POST(req) {
     }
 
     else if (action === 'revoke') {
-      if (can(who, 'shareClientLink') !== 'yes') return Response.json({ ok: false, error: 'You cannot revoke client links.' }, { status: 403 });
+      if ((await can(who, 'shareClientLink')) !== 'yes') return Response.json({ ok: false, error: 'You cannot revoke client links.' }, { status: 403 });
       await c.patch(id).set({ clientToken: null }).commit();
       await log(who, 'Revoked the client link', id, '');
     }

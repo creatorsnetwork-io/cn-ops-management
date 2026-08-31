@@ -4,12 +4,11 @@ import Link from 'next/link';
 import { LABEL, TAG, KINDS, STATES, verbsFor, isLate, canAssign } from '../lib/work';
 import Raise from './Raise';
 import ShareWork from './ShareWork';
-import { can as canDo } from '../lib/perm';
 
 const when = (t) => (t ? new Date(t).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
 const dayOf = (d) => (d ? new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', timeZone: 'UTC' }) : '');
 
-export default function WorkItem({ initial, who, people, vendors, leadName, canEdit }) {
+export default function WorkItem({ initial, who, people, vendors, leadName, canEdit, perms, canShare }) {
   const [i, setI] = useState(initial);
   const [v, setV] = useState(null);
   const [note, setNote] = useState('');
@@ -19,7 +18,7 @@ export default function WorkItem({ initial, who, people, vendors, leadName, canE
   const [busy, setBusy] = useState(false);
   const [edit, setEdit] = useState(null);
 
-  const verbs = verbsFor(i, who);
+  const verbs = verbsFor(i, who, perms);
 
   async function go(verb) {
     setBusy(true); setErr('');
@@ -52,7 +51,7 @@ export default function WorkItem({ initial, who, people, vendors, leadName, canE
   }
 
   const openFb = (i.feedback || []).filter((f) => !f.resolved);
-  const ch = canAssign(i, who);
+  const ch = canAssign(i, who, perms);
   const givableTo = ch.list === null ? people : people.filter((p) => (ch.list || []).includes(p.slug));
 
   async function saveAssign(slug, due) {
@@ -219,7 +218,7 @@ export default function WorkItem({ initial, who, people, vendors, leadName, canE
           </div>)}
       </div>
 
-      <ShareWork item={i} canShare={canDo(who, 'shareClientLink') !== 'no' || ['himanshu', 'aashif'].includes(who)} />
+      <ShareWork item={i} canShare={canShare} />
 
       <Raise leadName={leadName} workId={i._id} projectSlug={i.projectSlug}
         context={i.title} label="I need a decision on this" />

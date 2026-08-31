@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function QC() {
   const who = meSlug();
-  if (!pageAllowed(who, '/qc')) return <NotYours what="QC flags" />;
+  if (!(await pageAllowed(who, '/qc'))) return <NotYours what="QC flags" />;
 
   let weeks = [], error = null;
   try {
@@ -20,7 +20,8 @@ export default async function QC() {
   } catch (e) { error = e.message; }
 
   const softYes = (v) => ['yes', 'exception', 'oversight'].includes(v);
-  const canWaive = softYes(can(who, 'approveCraft')) || softYes(can(who, 'shipGate')) || softYes(can(who, 'triageFeedback'));
+  const [craftShade, shipShade, triageShade] = await Promise.all([can(who, 'approveCraft'), can(who, 'shipGate'), can(who, 'triageFeedback')]);
+  const canWaive = softYes(craftShade) || softYes(shipShade) || softYes(triageShade);
 
   return (
     <>

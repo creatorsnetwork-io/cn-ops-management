@@ -1,13 +1,13 @@
 'use client';
 import { useState } from 'react';
-import { can } from '../lib/perm';
 
 function Spin() { return <span className="spin" aria-label="working" />; }
 
 // Drafting and, separately, writing into the sheet. The two are deliberately
 // different buttons: a draft costs nothing, a write changes a client's calendar.
-export default function DraftPanel({ slug, week, item, who, onWritten, qcAt, flags, imageFlags }) {
-  const rights = can(who, 'generate');
+// `rights` is the resolved 'generate' shade, passed down from WeekReview
+// (itself read off the /api/review response) since this is a client component.
+export default function DraftPanel({ slug, week, item, who, onWritten, qcAt, flags, imageFlags, rights }) {
   const [drafts, setDrafts] = useState({});
   const [busy, setBusy] = useState('');
   const [err, setErr] = useState('');

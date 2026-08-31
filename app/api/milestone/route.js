@@ -42,7 +42,7 @@ export async function POST(req) {
       const m = list.find((x) => x._key === b.key);
       if (!m) return Response.json({ ok: false, error: 'That milestone is gone.' }, { status: 404 });
 
-      if (b.state === 'delivered' && !softYes(can(who, 'shipGate')))
+      if (b.state === 'delivered' && !softYes(await can(who, 'shipGate')))
         return Response.json({ ok: false, error: 'Only whoever holds the ship gate can mark something delivered.' }, { status: 403 });
       if (b.state === 'approved' && !String(b.clientName || '').trim())
         return Response.json({ ok: false, error: 'Name the person at the client who approved it.' }, { status: 400 });

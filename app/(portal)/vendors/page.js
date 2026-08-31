@@ -6,7 +6,7 @@ import Vendors from '../../../components/Vendors';
 export const dynamic = 'force-dynamic';
 
 export default async function Page() {
-  if (!pageAllowed(meSlug(), '/vendors')) return <NotYours what="Vendors and freelancers" />;
+  if (!(await pageAllowed(meSlug(), '/vendors'))) return <NotYours what="Vendors and freelancers" />;
   return (
     <>
       <div className="eyebrow">System</div>

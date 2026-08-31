@@ -1,7 +1,7 @@
 import { sanity } from '../../../lib/sanity';
 import { meSlug } from '../../../lib/me';
 import { can } from '../../../lib/perm';
-import { VERBS, verbCheck, KINDS, canCreateWork, canAssign, assignableTo } from '../../../lib/work';
+import { VERBS, verbCheck, KINDS, canCreateWork, canAssign, assignableTo, workPerms } from '../../../lib/work';
 import { log } from '../../../lib/week';
 
 export const dynamic = 'force-dynamic';
@@ -38,12 +38,13 @@ export async function POST(req) {
   const body = await req.json();
   const c = sanity(true);
   const now = new Date().toISOString();
+  const perms = await workPerms(who);
 
   try {
     if (body.action === 'create') {
-      if (!canCreateWork(who)) return Response.json({ ok: false, error: 'Your role cannot open new work.' }, { status: 403 });
+      if (!canCreateWork(perms)) return Response.json({ ok: false, error: 'Your role cannot open new work.' }, { status: 403 });
       if (!body.projectSlug || !body.title) return Response.json({ ok: false, error: 'A project and a title are the minimum.' }, { status: 400 });
-      const allowed = assignableTo(who);
+      const allowed = assignableTo(who, perms);
       if (body.assignee && allowed !== null && !allowed.includes(body.assignee))
         return Response.json({ ok: false, error: 'You can only give work to your own team.' }, { status: 403 });
       const kind = KINDS[body.kind] ? body.kind : 'other';
@@ -74,7 +75,7 @@ export async function POST(req) {
       const item = await one(body.id);
       if (!item) return Response.json({ ok: false, error: 'That item no longer exists.' }, { status: 404 });
       const v = VERBS[body.verb];
-      const check = verbCheck(body.verb, item, who);
+      const check = verbCheck(body.verb, item, who, perms);
       if (!check.ok) return Response.json({ ok: false, error: check.why }, { status: 403 });
       if (v.needNote && !String(body.note || '').trim())
         return Response.json({ ok: false, error: 'Say what needs changing, otherwise the person picking this up is guessing.' }, { status: 400 });
@@ -125,7 +126,7 @@ export async function POST(req) {
       }
 
       if (body.assignee !== undefined || body.due !== undefined || body.vendorId !== undefined) {
-        const check = canAssign(item, who);
+        const check = canAssign(item, who, perms);
         if (!check.ok) return Response.json({ ok: false, error: check.why }, { status: 403 });
         if (body.assignee !== undefined) {
           if (body.assignee && check.list !== null && !check.list.includes(body.assignee))

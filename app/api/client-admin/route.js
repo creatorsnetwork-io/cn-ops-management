@@ -15,7 +15,7 @@ export async function POST(req) {
   try {
     // Logo upload
     if (ct.includes('multipart/form-data')) {
-      if (!OPS.includes(who) && can(who, 'createClient') === 'no')
+      if (!OPS.includes(who) && (await can(who, 'createClient')) === 'no')
         return Response.json({ ok: false, error: 'Only Himanshu or Aashif can change a client record.' }, { status: 403 });
       const form = await req.formData();
       const slug = String(form.get('slug') || '');
@@ -30,7 +30,7 @@ export async function POST(req) {
     }
 
     const b = await req.json();
-    if (!OPS.includes(who) && can(who, 'createClient') === 'no')
+    if (!OPS.includes(who) && (await can(who, 'createClient')) === 'no')
       return Response.json({ ok: false, error: 'Only Himanshu or Aashif can change a client record.' }, { status: 403 });
 
     if (b.action === 'add') {

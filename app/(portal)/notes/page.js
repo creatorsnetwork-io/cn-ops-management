@@ -7,6 +7,6 @@ export const dynamic = 'force-dynamic';
 
 export default async function Page() {
   const who = meSlug();
-  if (!pageAllowed(who, '/notes')) return <NotYours what="Meeting notes" />;
+  if (!(await pageAllowed(who, '/notes'))) return <NotYours what="Meeting notes" />;
   return <MeetingNotes />;
 }

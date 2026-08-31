@@ -17,12 +17,12 @@ const P = `{
   "workId": work->_id, "workTitle": work->title, "workState": work->state
 }`;
 
-const CAN_TRIAGE = (who) => ['yes', 'oversight'].includes(can(who, 'triageFeedback')) || ['himanshu', 'aashif'].includes(who);
+const CAN_TRIAGE = async (who) => ['yes', 'oversight'].includes(await can(who, 'triageFeedback')) || ['himanshu', 'aashif'].includes(who);
 
 export async function GET() {
   try {
     const items = await sanity(true).fetch(`*[_type=="request"]|order(at desc)[0...300]${P}`);
-    return Response.json({ ok: true, items, who: meSlug(), canTriage: CAN_TRIAGE(meSlug()) });
+    return Response.json({ ok: true, items, who: meSlug(), canTriage: await CAN_TRIAGE(meSlug()) });
   } catch (e) {
     return Response.json({ ok: false, error: (e.message || String(e)).slice(0, 200) });
   }
@@ -52,7 +52,7 @@ export async function POST(req) {
       return Response.json({ ok: true, id: doc._id });
     }
 
-    if (!CAN_TRIAGE(who)) return Response.json({ ok: false, error: 'Your role does not decide on requests.' }, { status: 403 });
+    if (!(await CAN_TRIAGE(who))) return Response.json({ ok: false, error: 'Your role does not decide on requests.' }, { status: 403 });
     if (!b.id) return Response.json({ ok: false, error: 'Nothing selected.' }, { status: 400 });
     const r = await sanity(true).fetch(`*[_id==$id][0]${P}`, { id: b.id });
     if (!r) return Response.json({ ok: false, error: 'That request no longer exists.' }, { status: 404 });

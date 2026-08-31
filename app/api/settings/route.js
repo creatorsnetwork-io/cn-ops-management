@@ -15,7 +15,7 @@ export async function GET() {
 
 export async function POST(req) {
   const who = meSlug();
-  if (can(who, 'settings') !== 'yes') return Response.json({ ok: false, error: 'Only Himanshu or Aashif can change settings.' }, { status: 403 });
+  if ((await can(who, 'settings')) !== 'yes') return Response.json({ ok: false, error: 'Only Himanshu or Aashif can change settings.' }, { status: 403 });
   const b = await req.json();
   const c = sanity(true);
 

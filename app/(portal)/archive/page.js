@@ -11,7 +11,7 @@ const when = (t) => (t ? new Date(t).toLocaleDateString('en-GB', { day: 'numeric
 const dayOf = (w) => (w ? new Date(w + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '');
 
 export default async function Archive() {
-  if (!pageAllowed(meSlug(), '/archive')) return <NotYours what="Archive" />;
+  if (!(await pageAllowed(meSlug(), '/archive'))) return <NotYours what="Archive" />;
 
   let projects = [], weeks = [], work = [], requests = [], escalations = [], error = null;
   try {

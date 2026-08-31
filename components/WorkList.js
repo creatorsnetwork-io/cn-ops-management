@@ -2,15 +2,14 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { LABEL, TAG, KINDS, verbsFor, scopeFilter, tabsFor, isLate, canAssign, assignableTo } from '../lib/work';
-import { can } from '../lib/perm';
 
 const dayOf = (d) => (d ? new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : '');
 
-function WorkRow({ item, showProject, who, people, note, assign, move }) {
-  const allowed = verbsFor(item, who).filter((v) => v.ok);
+function WorkRow({ item, showProject, who, people, note, assign, move, perms }) {
+  const allowed = verbsFor(item, who, perms).filter((v) => v.ok);
   const direct = allowed.filter((v) => !v.needNote && !v.needWho && (!v.needLink || item.driveLink));
   const detail = allowed.filter((v) => !direct.some((d) => d.name === v.name));
-  const ch = canAssign(item, who);
+  const ch = canAssign(item, who, perms);
   const list = ch.list === null ? people : people.filter((p) => (ch.list || []).includes(p.slug));
   const shortKind = ({ page: 'WEB', article: 'COPY', report: 'RPT', asset: 'ART', film: 'FILM', aivideo: 'AI', campaign: 'CMP', other: 'WORK' })[item.kind] || 'WORK';
 
@@ -60,8 +59,8 @@ function WorkRow({ item, showProject, who, people, note, assign, move }) {
   );
 }
 
-function NewWork({ projects, people, who, onDone, onCancel }) {
-  const allowed = assignableTo(who);
+function NewWork({ projects, people, who, onDone, onCancel, perms }) {
+  const allowed = assignableTo(who, perms);
   const canGiveTo = allowed === null ? people : people.filter((p) => allowed.includes(p.slug));
   const [f, setF] = useState({ projectSlug: projects[0]?.slug || '', title: '', kind: 'page', assignee: '', due: '', brief: '', acceptance: '', firstTime: false });
   const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
@@ -111,7 +110,7 @@ function NewWork({ projects, people, who, onDone, onCancel }) {
   );
 }
 
-export default function WorkList({ who, people, projects, canCreate }) {
+export default function WorkList({ who, people, projects, canCreate, perms, rights }) {
   const [items, setItems] = useState(null);
   const [tab, setTab] = useState('mine');
   const [err, setErr] = useState('');
@@ -143,12 +142,12 @@ export default function WorkList({ who, people, projects, canCreate }) {
     else setNote({ ...note, [id]: j.error });
   }
 
-  const tabs = tabsFor(who);
-  const shown = items ? scopeFilter(items, who, tab) : [];
-  const mine = items ? scopeFilter(items, who, 'mine') : [];
-  const coming = items ? scopeFilter(items, who, 'tome') : [];
+  const tabs = tabsFor(who, perms);
+  const shown = items ? scopeFilter(items, who, tab, perms) : [];
+  const mine = items ? scopeFilter(items, who, 'mine', perms) : [];
+  const coming = items ? scopeFilter(items, who, 'tome', perms) : [];
   const visible = items ? (tabs.some(([k]) => k === 'all')
-    ? scopeFilter(items, who, 'all')
+    ? scopeFilter(items, who, 'all', perms)
     : Array.from(new Map(mine.concat(coming).map((i) => [i._id, i])).values())) : [];
   const atGate = visible.filter((i) => ['submitted', 'craft', 'ship', 'client'].includes(i.state));
   const grouped = shown.reduce((all, item) => {
@@ -173,15 +172,15 @@ export default function WorkList({ who, people, projects, canCreate }) {
         <div className="kpi"><div className="lbl">Assigned to you</div><div className="v">{items ? mine.length : '...'}</div><div className="n">your active list</div></div>
         <div className="kpi"><span className="d a" /><div className="lbl">Coming to you</div><div className="v">{items ? coming.length : '...'}</div><div className="n">someone else owns it now</div></div>
         <div className="kpi"><span className="d r" /><div className="lbl">Sitting at a gate</div><div className="v">{items ? atGate.length : '...'}</div><div className="n bad">within your visible scope</div></div>
-        <div className="kpi"><div className="lbl">Your rights</div><div className="v sm">{can(who, 'generate') === 'yes' ? 'Full generation' : can(who, 'generate')}</div><div className="n">from the permissions table</div></div>
+        <div className="kpi"><div className="lbl">Your rights</div><div className="v sm">{rights === 'yes' ? 'Full generation' : rights}</div><div className="n">from the permissions table</div></div>
       </div>
 
-      {adding ? <NewWork projects={projects} people={people} who={who} onCancel={() => setAdding(false)} onDone={() => { setAdding(false); load(); }} /> : null}
+      {adding ? <NewWork projects={projects} people={people} who={who} perms={perms} onCancel={() => setAdding(false)} onDone={() => { setAdding(false); load(); }} /> : null}
 
       <div className="tabsrow">
         {tabs.map(([k, l]) => (
           <button key={k} className={'tb ' + (tab === k ? 'on' : '')} onClick={() => setTab(k)}>
-            {l}{items ? ' (' + scopeFilter(items, who, k).length + ')' : ''}
+            {l}{items ? ' (' + scopeFilter(items, who, k, perms).length + ')' : ''}
           </button>))}
       </div>
 
@@ -195,7 +194,7 @@ export default function WorkList({ who, people, projects, canCreate }) {
               <header><div><h2>{first.client} · {first.projectName}</h2><div className="sub2">{grouped[key].length} active item{grouped[key].length === 1 ? '' : 's'}</div></div>
                 <Link className="btn sm" href={'/projects/' + first.projectSlug}>Open project</Link></header>
               {grouped[key].map((i) => <WorkRow key={i._id} item={i} showProject={false}
-                who={who} people={people} note={note} assign={assign} move={move} />)}
+                who={who} people={people} note={note} assign={assign} move={move} perms={perms} />)}
             </div>
           );
         }) : <div className="panel"><div className="pad note">Nothing in this view.</div></div>
@@ -205,7 +204,7 @@ export default function WorkList({ who, people, projects, canCreate }) {
           <header><div><h2>{tab === 'mine' ? 'Assigned to you' : 'Waiting on someone else, then you'}</h2>
             <div className="sub2">Each row shows every action your role can take right now.</div></div></header>
           {shown.length ? shown.map((i) => <WorkRow key={i._id} item={i} showProject
-            who={who} people={people} note={note} assign={assign} move={move} />)
+            who={who} people={people} note={note} assign={assign} move={move} perms={perms} />)
             : <div className="pad note">{tab === 'mine' ? 'Nothing assigned to you.' : 'Nothing waiting on your sign off.'}</div>}
         </div>
       ) : null}

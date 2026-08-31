@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { sanity } from '../../../../lib/sanity';
 import { meSlug } from '../../../../lib/me';
 import { can } from '../../../../lib/perm';
+import { workPerms } from '../../../../lib/work';
 import ProjectDetail from '../../../../components/ProjectDetail';
 
 export const dynamic = 'force-dynamic';
@@ -122,13 +123,18 @@ export default async function Project({ params, searchParams }) {
     reports: (p.reviews || []).filter((r) => r.shipGate).length + (p.cycles || []).filter((c) => c.reportLink).length,
   };
 
+  const [shareShade, closeShade, contractShade, deliverablesShade, calendarShade, workShade, workP] = await Promise.all([
+    can(who, 'shareClientLink'), can(who, 'closeProject'), can(who, 'uploadContract'),
+    can(who, 'editDeliverables'), can(who, 'editCalendarSources'), can(who, 'createWork'), workPerms(who),
+  ]);
   const perms = {
-    canShare: can(who, 'shareClientLink') === 'yes',
-    canClose: can(who, 'closeProject') === 'yes',
-    canUploadContract: can(who, 'uploadContract') === 'yes',
-    canEditDeliverables: can(who, 'editDeliverables') === 'yes',
-    canEditCalendar: can(who, 'editCalendarSources') === 'yes',
-    canCreateWork: can(who, 'createWork') !== 'no',
+    ...workP,
+    canShare: shareShade === 'yes',
+    canClose: closeShade === 'yes',
+    canUploadContract: contractShade === 'yes',
+    canEditDeliverables: deliverablesShade === 'yes',
+    canEditCalendar: calendarShade === 'yes',
+    canCreateWork: workShade !== 'no',
     canAddMilestone: ['himanshu', 'aashif'].includes(who),
     canMarkIdeas: ['himanshu', 'aashif', 'priyanka'].includes(who),
   };

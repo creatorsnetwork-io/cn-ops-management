@@ -25,12 +25,13 @@ export async function GET(req) {
 
   const inMonth = work.filter((w) => (w.due || '').startsWith(month) || (w.approvedAt || '').startsWith(month));
 
+  const shipShade = await can(who, 'shipGate');
   return Response.json({
     ok: true, month, slug,
     cycle: cycle || null,
     work: inMonth,
     done: inMonth.filter((w) => ['approved', 'done'].includes(w.state)).length,
-    perms: { ship: can(who, 'shipGate'), canShip: softYes(can(who, 'shipGate')), who },
+    perms: { ship: shipShade, canShip: softYes(shipShade), who },
   });
 }
 
@@ -81,7 +82,7 @@ export async function POST(req) {
     }
 
     if (b.action === 'ship') {
-      if (!softYes(can(who, 'shipGate')))
+      if (!softYes(await can(who, 'shipGate')))
         return Response.json({ ok: false, error: 'Your role does not sign a month off.' }, { status: 403 });
       const cur = await loadCycle(b.slug, month);
       if (!cur.reportLink)
@@ -100,7 +101,7 @@ export async function POST(req) {
     }
 
     if (b.action === 'reopen') {
-      if (!softYes(can(who, 'shipGate'))) return Response.json({ ok: false, error: 'Your role cannot reopen a month.' }, { status: 403 });
+      if (!softYes(await can(who, 'shipGate'))) return Response.json({ ok: false, error: 'Your role cannot reopen a month.' }, { status: 403 });
       await c.patch(id).set({ shipGate: null }).commit();
       await log(who, 'Reopened a month', id, '');
       return Response.json({ ok: true });

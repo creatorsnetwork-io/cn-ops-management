@@ -9,9 +9,9 @@ export const dynamic = 'force-dynamic';
 
 export default async function Page({ searchParams }) {
   const who = meSlug();
-  if (!pageAllowed(who, '/brand')) return <NotYours what="Brand brain" />;
+  if (!(await pageAllowed(who, '/brand'))) return <NotYours what="Brand brain" />;
 
-  const shade = can(who, 'approveBrand');
+  const shade = await can(who, 'approveBrand');
   const canEdit = shade !== 'no' && !!shade;
 
   let clients = [], error = null;

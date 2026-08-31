@@ -63,7 +63,7 @@ function voiceBlock(p) {
 
 export async function POST(req) {
   const who = meSlug();
-  const rights = can(who, 'generate');
+  const rights = await can(who, 'generate');
   if (rights === 'no') return Response.json({ ok: false, error: 'Your role does not draft content.' }, { status: 403 });
 
   const b = await req.json();

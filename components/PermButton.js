@@ -1,10 +1,11 @@
 'use client';
-import { can } from '../lib/perm';
 
 // The prototype's permBtn, made real. A role that cannot do a thing does not get
 // a button that lies to it: it gets Request, or Oversight, or the scope it holds.
-export default function PermButton({ who, cap, label, dark, onClick, onRequest, disabled }) {
-  const v = can(who, cap);
+// `shade` is resolved server-side (via can()) and passed in, since a client
+// component cannot await the permissions table mid-render.
+export default function PermButton({ shade, label, dark, onClick, onRequest, disabled }) {
+  const v = shade;
 
   if (v === 'yes')
     return <button className={'btn' + (dark ? ' dark' : '')} disabled={disabled} onClick={onClick}>{label}</button>;

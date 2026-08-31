@@ -45,7 +45,7 @@ function Controls({ favOnly, setFavOnly, grid, setGrid, types, filter, setFilter
 }
 
 /* ============================ CLIENTS ============================ */
-export function ClientsBrowse({ who, rows, favs, canAdd }) {
+export function ClientsBrowse({ who, rows, favs, addShade }) {
   const [favOnly, setFavOnly] = useState(false);
   const [grid, setGrid] = useState(true);
   const [fav, setFav] = useState(favs || []);
@@ -81,7 +81,7 @@ export function ClientsBrowse({ who, rows, favs, canAdd }) {
             lives in a project beneath it.
           </p>
         </div>
-        {canAdd ? <PermButton who={who} cap="createClient" label="Add client" dark onClick={() => setAdding(!adding)} /> : null}
+        {addShade !== 'no' ? <PermButton shade={addShade} label="Add client" dark onClick={() => setAdding(!adding)} /> : null}
       </div>
 
       {adding ? (
@@ -161,7 +161,7 @@ export function ClientsBrowse({ who, rows, favs, canAdd }) {
 }
 
 /* ============================ PROJECTS ============================ */
-export function ProjectsBrowse({ who, rows, clients, people, favs, openAdd, initialClient }) {
+export function ProjectsBrowse({ who, rows, clients, people, favs, openAdd, initialClient, addShade }) {
   const [favOnly, setFavOnly] = useState(false);
   const [grid, setGrid] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -199,7 +199,7 @@ export function ProjectsBrowse({ who, rows, clients, people, favs, openAdd, init
           <h1>Projects</h1>
           <p className="lede">Each project carries its own service template, workflow, contract and deliverables.</p>
         </div>
-        <PermButton who={who} cap="createProject" label="New project" dark
+        <PermButton shade={addShade} label="New project" dark
           onClick={() => setAdding(!adding)} onRequest={() => setAdding(!adding)} />
       </div>
 

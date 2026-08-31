@@ -17,7 +17,7 @@ const ago = (t) => {
 };
 
 export default async function Jobs() {
-  if (!pageAllowed(meSlug(), '/jobs')) return <NotYours what="Job health" />;
+  if (!(await pageAllowed(meSlug(), '/jobs'))) return <NotYours what="Job health" />;
 
   let projects = [], activity = [], settings = null, error = null;
   try {

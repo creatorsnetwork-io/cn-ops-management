@@ -13,7 +13,7 @@ export async function PATCH(req, { params }) {
   // Closing is its own thing, not a field edit: it needs a reason, a
   // permission of its own, and never reopens what it just closed.
   if (body.close) {
-    if (can(who, 'closeProject') !== 'yes')
+    if ((await can(who, 'closeProject')) !== 'yes')
       return Response.json({ ok: false, error: 'Only Himanshu or Aashif can close a project.' }, { status: 403 });
     const reason = String(body.close.reason || '').trim();
     if (!reason)
@@ -28,7 +28,7 @@ export async function PATCH(req, { params }) {
     return Response.json({ ok: true, project: doc });
   }
 
-  if ('calendarSources' in body && can(who, 'editCalendarSources') !== 'yes') {
+  if ('calendarSources' in body && (await can(who, 'editCalendarSources')) !== 'yes') {
     return Response.json({ ok: false, error: 'Only Himanshu and Aashif can change calendar links.' }, { status: 403 });
   }
 
@@ -43,7 +43,7 @@ export async function PATCH(req, { params }) {
     })).filter((c) => c.sheetId);
   }
   if (Array.isArray(body.deliverables)) {
-    if (can(who, 'editDeliverables') !== 'yes')
+    if ((await can(who, 'editDeliverables')) !== 'yes')
       return Response.json({ ok: false, error: 'Only Himanshu and Aashif can change deliverable baselines.' }, { status: 403 });
     patch.deliverables = body.deliverables.map((d, i) => ({
       _key: d._key || 'dl' + Date.now() + i,

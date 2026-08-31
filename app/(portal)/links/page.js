@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function Links() {
   const who = meSlug();
-  if (!pageAllowed(who, '/links')) return <NotYours what="Client links" />;
+  if (!(await pageAllowed(who, '/links'))) return <NotYours what="Client links" />;
 
   let rows = [], shares = [], error = null;
   try {
@@ -43,6 +43,8 @@ export default async function Links() {
     }
   } catch (e) { error = e.message; }
 
+  const canRevoke = (await can(who, 'shareClientLink')) === 'yes';
+
   return (
     <>
       <div className="head">
@@ -56,7 +58,7 @@ export default async function Links() {
         <a className="btn dark" href="/work">New link</a>
       </div>
       {error ? <div className="alertbar">Sanity did not answer. <code>{error}</code></div> : null}
-      <ClientLinks rows={rows} shares={shares} canRevoke={can(who, 'shareClientLink') === 'yes'} />
+      <ClientLinks rows={rows} shares={shares} canRevoke={canRevoke} />
     </>
   );
 }

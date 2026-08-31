@@ -7,7 +7,7 @@ import NotYours from '../../../components/NotYours';
 export const dynamic = 'force-dynamic';
 
 export default async function Page() {
-  if (!pageAllowed(meSlug(), '/escalations')) return <NotYours what="Escalations" />;
+  if (!(await pageAllowed(meSlug(), '/escalations'))) return <NotYours what="Escalations" />;
 
   let items = [], people = [], error = null;
   const who = meSlug();

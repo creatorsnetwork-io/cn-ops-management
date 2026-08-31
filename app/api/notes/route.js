@@ -43,8 +43,8 @@ export async function GET() {
       vendors: vendors || [], prospects: prospects || [],
       kinds: KINDS,
       rights: {
-        canApprove: softYes(can(who, 'approveRecap')),
-        canScan: softYes(can(who, 'settings')),
+        canApprove: softYes(await can(who, 'approveRecap')),
+        canScan: softYes(await can(who, 'settings')),
       },
     });
   } catch (e) {
@@ -62,7 +62,7 @@ export async function POST(req) {
     // Walk the shared Drive folders and record every notes document found.
     // Nothing is read or drafted here, so this stays cheap and can be run often.
     if (b.action === 'scan') {
-      if (!softYes(can(who, 'settings')))
+      if (!softYes(await can(who, 'settings')))
         return Response.json({ ok: false, error: 'Only Himanshu or Aashif can scan Drive.' }, { status: 403 });
 
       const folders = await noteFolders();
@@ -197,7 +197,7 @@ export async function POST(req) {
     // A person accepts the recap. This is the only step that creates a decision
     // record, and it is why nothing upstream is allowed to write one.
     if (b.action === 'accept') {
-      if (!softYes(can(who, 'approveRecap')))
+      if (!softYes(await can(who, 'approveRecap')))
         return Response.json({ ok: false, error: 'Your role does not approve recaps.' }, { status: 403 });
       const n = await c.fetch('*[_id==$id][0]', { id: b.id });
       if (!n) return Response.json({ ok: false, error: 'That note is no longer here.' }, { status: 404 });
@@ -228,7 +228,7 @@ export async function POST(req) {
     }
 
     if (b.action === 'reject') {
-      if (!softYes(can(who, 'approveRecap')))
+      if (!softYes(await can(who, 'approveRecap')))
         return Response.json({ ok: false, error: 'Your role does not approve recaps.' }, { status: 403 });
       if (!String(b.note || '').trim())
         return Response.json({ ok: false, error: 'Say what was wrong with it, otherwise the same mistake comes back next week.' }, { status: 400 });
@@ -243,7 +243,7 @@ export async function POST(req) {
 
     // Which Google Meet folders to read. One row per person.
     if (b.action === 'folders') {
-      if (!softYes(can(who, 'settings')))
+      if (!softYes(await can(who, 'settings')))
         return Response.json({ ok: false, error: 'Only Himanshu or Aashif can change this.' }, { status: 403 });
       const rows = (Array.isArray(b.folders) ? b.folders : [])
         .map((f, i) => ({

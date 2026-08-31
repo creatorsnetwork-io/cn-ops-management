@@ -32,11 +32,11 @@ const pct = (a, b) => (!b ? 0 : Math.min(100, Math.round((a / b) * 100)));
 const when = (t) => (t ? new Date(t).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Time not recorded');
 const dayOf = (d) => (d ? new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : '');
 
-function WorkRow({ item, who, roster, workBusy, workNote, assignWork, moveWork }) {
-  const allowed = verbsFor(item, who).filter((verb) => verb.ok);
+function WorkRow({ item, who, roster, workBusy, workNote, assignWork, moveWork, perms }) {
+  const allowed = verbsFor(item, who, perms).filter((verb) => verb.ok);
   const direct = allowed.filter((v) => !v.needNote && !v.needWho && (!v.needLink || item.driveLink));
   const detail = allowed.filter((v) => !direct.some((d) => d.name === v.name));
-  const change = canAssign(item, who);
+  const change = canAssign(item, who, perms);
   const people = change.list === null
     ? roster
     : roster.filter((person) => (change.list || []).includes(person.slug));
@@ -218,7 +218,7 @@ export default function ProjectDetail({ p, activity, perms, activeTab, who }) {
         <header><div><h2>Work items</h2><div className="sub2">Every item keeps its current state and opens into the live verb and permission flow.</div></div>
           {perms.canCreateWork ? <Link className="btn sm" href="/work">Add work item</Link> : null}</header>
         {work.length ? work.map((item) => <WorkRow key={item._id} item={item} who={who} roster={p.people || []}
-          workBusy={workBusy} workNote={workNote} assignWork={assignWork} moveWork={moveWork} />)
+          workBusy={workBusy} workNote={workNote} assignWork={assignWork} moveWork={moveWork} perms={perms} />)
           : <div className="pad note">No work items on this project yet.</div>}
       </div> : null}
 

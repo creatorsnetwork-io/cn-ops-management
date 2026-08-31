@@ -22,7 +22,7 @@ export default async function Page({ params }) {
   if (error) return <><h1>Working document</h1><div className="alert">Sanity did not answer. <code>{error}</code></div></>;
   if (!p) return <><h1>Not found</h1><p className="lede"><Link href="/projects">Back to projects</Link></p></>;
 
-  const rights = can(who, 'editPRD');
+  const rights = await can(who, 'editPRD');
 
   return (
     <>

@@ -1,7 +1,6 @@
 'use client';
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import DraftPanel from './DraftPanel';
-import { can } from '../lib/perm';
 
 function shift(w, n) { const d = new Date(w + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n * 7); return d.toISOString().slice(0, 10); }
 function pretty(w) {
@@ -130,8 +129,8 @@ export default function WeekReview({ slug, startWeek }) {
   const shipped = !!(d && d.shipGate);
   const crafted = !!(d && d.craftGate);
   const notApproved = items.filter((i) => (i.review || {}).craft !== 'approved');
-  const canWaive = P.canCraft || P.canShip || can(P.who || '', 'triageFeedback') === 'yes';
-  const canOverride = ['yes', 'exception', 'oversight'].includes(can(P.who || '', 'shipOverride'));
+  const canWaive = P.canCraft || P.canShip || P.triageFeedback === 'yes';
+  const canOverride = ['yes', 'exception', 'oversight'].includes(P.shipOverride || 'no');
 
   return (
     <>
@@ -169,7 +168,7 @@ export default function WeekReview({ slug, startWeek }) {
 
             <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--line2)', display: 'flex', gap: 7, flexWrap: 'wrap', alignItems: 'center' }}>
               <button className="btn sm dark" disabled={!!busy} onClick={() => act('qc')}>{busy === 'qc' ? <><Spin /> Checking</> : 'Run quality checks'}</button>
-              {can(P.who || '', 'generate') !== 'no' ? (
+              {(P.generate || 'no') !== 'no' ? (
                 <button className="btn sm" disabled={!!busy} onClick={async () => {
                   setBusy('tone'); setMsg('');
                   const r = await fetch('/api/generate', {
@@ -179,7 +178,7 @@ export default function WeekReview({ slug, startWeek }) {
                   const j = await r.json(); setBusy('');
                   if (j.ok) { setMsg(j.count ? '' : 'Read the week, nothing worth raising.'); load(); } else setMsg(j.error);
                 }}>{busy === 'tone' ? <><Spin /> Reading</> : '✦ Read it for tone'}</button>) : null}
-              {can(P.who || '', 'generate') !== 'no' ? (
+              {(P.generate || 'no') !== 'no' ? (
                 <button className="btn sm" disabled={!!busy} onClick={async () => {
                   setBusy('image'); setMsg('');
                   const r = await fetch('/api/generate', {
@@ -189,7 +188,7 @@ export default function WeekReview({ slug, startWeek }) {
                   const j = await r.json(); setBusy('');
                   if (j.ok) { setMsg(j.count ? '' : 'Checked ' + j.total + ' item(s), nothing to flag.'); load(); } else setMsg(j.error);
                 }}>{busy === 'image' ? <><Spin /> Checking images</> : '✦ Check images against captions'}</button>) : null}
-              {can(P.who || '', 'generate') !== 'no' && !shipped ? (
+              {(P.generate || 'no') !== 'no' && !shipped ? (
                 <button className="btn sm" disabled={!!busy} onClick={async () => {
                   setBusy('ideas'); setMsg('');
                   const r = await fetch('/api/generate', {
@@ -316,7 +315,7 @@ export default function WeekReview({ slug, startWeek }) {
                             <div className="lbl" style={{ marginBottom: 6 }}>The creative</div>
                             <Preview link={i.creativeLink} text={i.creativeText} />
                           </div>
-                          <DraftPanel slug={slug} week={week} item={i} who={P.who || ''} onWritten={load}
+                          <DraftPanel slug={slug} week={week} item={i} who={P.who || ''} rights={P.generate || 'no'} onWritten={load}
                             qcAt={d.qcAt} flags={fl} imageFlags={(d.image || {})[i.key] || []} />
 
                           <div style={{ marginTop: 13, display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12.5, color: 'var(--muted)' }}>

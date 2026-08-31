@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function Feedback() {
   const who = meSlug();
-  if (!pageAllowed(who, '/feedback')) return <NotYours what="Client feedback" />;
+  if (!(await pageAllowed(who, '/feedback'))) return <NotYours what="Client feedback" />;
 
   let weeks = [], work = [], candidates = [], error = null;
   try {
@@ -28,7 +28,7 @@ export default async function Feedback() {
         _id,title,"projectName":project->name,"client":project->client->name}`),
     ]);
   } catch (e) { error = e.message; }
-  const canTriage = ['yes', 'oversight'].includes(can(who, 'triageFeedback')) || ['himanshu', 'aashif'].includes(who);
+  const canTriage = ['yes', 'oversight'].includes(await can(who, 'triageFeedback')) || ['himanshu', 'aashif'].includes(who);
 
   return (
     <>

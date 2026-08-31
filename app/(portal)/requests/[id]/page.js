@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function Page({ params }) {
   const who = meSlug();
-  if (!pageAllowed(who, '/requests')) return <NotYours what="Request detail" />;
+  if (!(await pageAllowed(who, '/requests'))) return <NotYours what="Request detail" />;
 
   let request = null, projects = [], people = [], error = null;
   try {
@@ -27,6 +27,6 @@ export default async function Page({ params }) {
 
   if (error) return <><h1>Request</h1><div className="alertbar">Sanity did not answer. <code>{error}</code></div></>;
   if (!request) return <><h1>Not found</h1><p className="lede"><Link href="/requests">Back to requests</Link></p></>;
-  const canTriage = ['yes', 'oversight'].includes(can(who, 'triageFeedback')) || ['himanshu', 'aashif'].includes(who);
+  const canTriage = ['yes', 'oversight'].includes(await can(who, 'triageFeedback')) || ['himanshu', 'aashif'].includes(who);
   return <RequestDetail request={request} projects={projects} people={people} canTriage={canTriage} />;
 }

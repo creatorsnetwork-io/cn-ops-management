@@ -177,12 +177,18 @@ export async function GET(req) {
         + (r.pending === 1 ? '' : 's') + ' outstanding this week, ' + bits.join(' and ')
         + (dates.length ? ', dated ' + dayName(dates[0]) + (dates.length > 1 ? ' to ' + dayName(dates[dates.length - 1]) : '') : ''));
     }
+    const capBySlug = Object.fromEntries(await Promise.all(people.map(async (p) => [p.slug, {
+      approveCraft: softYes(await can(p.slug, 'approveCraft')),
+      shipGate: softYes(await can(p.slug, 'shipGate')),
+      triageFeedback: softYes(await can(p.slug, 'triageFeedback')),
+    }])));
     for (const p of people) {
+      const cap = capBySlug[p.slug] || {};
       const q = work.filter((w) => {
         if (['approved', 'done'].includes(w.state)) return false;
-        if (w.state === 'craft' || (w.state === 'submitted' && w.needsCraft)) return softYes(can(p.slug, 'approveCraft'));
-        if (w.state === 'ship' || (w.state === 'submitted' && !w.needsCraft)) return softYes(can(p.slug, 'shipGate'));
-        if (w.state === 'client') return softYes(can(p.slug, 'triageFeedback'));
+        if (w.state === 'craft' || (w.state === 'submitted' && w.needsCraft)) return cap.approveCraft;
+        if (w.state === 'ship' || (w.state === 'submitted' && !w.needsCraft)) return cap.shipGate;
+        if (w.state === 'client') return cap.triageFeedback;
         return false;
       });
       if (q.length) digest.push(p.name + ': ' + q.length + ' item' + (q.length === 1 ? '' : 's')

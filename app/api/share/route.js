@@ -18,7 +18,7 @@ export async function POST(req) {
 
   try {
     if (b.action === 'create') {
-      if (can(who, 'shareClientLink') === 'no' && !['himanshu', 'aashif'].includes(who))
+      if ((await can(who, 'shareClientLink')) === 'no' && !['himanshu', 'aashif'].includes(who))
         return Response.json({ ok: false, error: 'Your role does not share links outside the team.' }, { status: 403 });
       if (!KINDS.includes(b.kind)) return Response.json({ ok: false, error: 'Not a kind of link.' }, { status: 400 });
 
@@ -48,7 +48,7 @@ export async function POST(req) {
     }
 
     if (b.action === 'revoke') {
-      if (can(who, 'shareClientLink') === 'no' && !['himanshu', 'aashif'].includes(who))
+      if ((await can(who, 'shareClientLink')) === 'no' && !['himanshu', 'aashif'].includes(who))
         return Response.json({ ok: false, error: 'Your role cannot revoke links.' }, { status: 403 });
       const s = await sanity(true).fetch('*[_type=="share" && token==$t][0]{_id}', { t: b.token });
       if (!s) return Response.json({ ok: false, error: 'No such link.' }, { status: 404 });

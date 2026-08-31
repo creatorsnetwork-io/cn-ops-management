@@ -7,7 +7,7 @@ import { meSlug } from '../../../lib/me';
 export const dynamic = 'force-dynamic';
 
 export default async function Page() {
-  if (!pageAllowed(meSlug(), '/requests')) return <NotYours what="Requests" />;
+  if (!(await pageAllowed(meSlug(), '/requests'))) return <NotYours what="Requests" />;
 
   let clients = [], projects = [], people = [], error = null;
   try {

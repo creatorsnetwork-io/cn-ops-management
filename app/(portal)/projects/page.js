@@ -1,5 +1,6 @@
 import { sanity } from '../../../lib/sanity';
 import { meSlug } from '../../../lib/me';
+import { can } from '../../../lib/perm';
 import { pageAllowed } from '../../../lib/guard';
 import NotYours from '../../../components/NotYours';
 import { ProjectsBrowse } from '../../../components/Browse';
@@ -60,8 +61,9 @@ function timelineOf(p) {
 
 export default async function Projects({ searchParams }) {
   const who = meSlug();
-  if (!pageAllowed(who, '/projects')) return <NotYours what="Projects" />;
+  if (!(await pageAllowed(who, '/projects'))) return <NotYours what="Projects" />;
 
+  const addShade = await can(who, 'createProject');
   const today = new Date().toISOString().slice(0, 10);
   let rows = [], clients = [], people = [], favs = [], error = null;
 
@@ -123,7 +125,7 @@ export default async function Projects({ searchParams }) {
     <>
       {error ? <div className="alertbar">Sanity did not answer. <code>{error}</code></div> : null}
       <ProjectsBrowse who={who} rows={rows} clients={clients} people={people} favs={favs}
-        openAdd={searchParams?.add === '1'} initialClient={initialClient} />
+        openAdd={searchParams?.add === '1'} initialClient={initialClient} addShade={addShade} />
     </>
   );
 }

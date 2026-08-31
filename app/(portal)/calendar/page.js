@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function CalendarIndex({ searchParams }) {
   const who = meSlug();
-  if (!pageAllowed(who, '/calendar')) return <NotYours what="Calendar tracker" />;
+  if (!(await pageAllowed(who, '/calendar'))) return <NotYours what="Calendar tracker" />;
 
   let rows = [], error = null;
   try {
@@ -18,11 +18,13 @@ export default async function CalendarIndex({ searchParams }) {
     );
   } catch (e) { error = e.message; }
 
+  const canShare = (await can(who, 'shareClientLink')) === 'yes';
+
   return (
     <>
       {error ? <div className="alertbar">Sanity did not answer. <code>{error}</code></div> : null}
       <CalendarHub projects={rows} defaultSlug={searchParams && searchParams.project}
-        canShare={can(who, 'shareClientLink') === 'yes'} />
+        canShare={canShare} />
     </>
   );
 }

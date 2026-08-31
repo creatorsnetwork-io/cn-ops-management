@@ -7,7 +7,7 @@ import { meSlug } from '../../../lib/me';
 export const dynamic = 'force-dynamic';
 
 export default async function Reports() {
-  if (!pageAllowed(meSlug(), '/reports')) return <NotYours what="Reports" />;
+  if (!(await pageAllowed(meSlug(), '/reports'))) return <NotYours what="Reports" />;
 
   let rows = [], error = null;
   try { rows = await rollupAll(); } catch (e) { error = e.message; }

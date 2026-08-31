@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { sanity } from '../../../../lib/sanity';
 import { meSlug } from '../../../../lib/me';
+import { can } from '../../../../lib/perm';
 import WorkItem from '../../../../components/WorkItem';
 import { leadNameOf } from '../../../../lib/escalate';
+import { workPerms } from '../../../../lib/work';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +19,8 @@ const PROJECTION = `{
 export default async function Page({ params }) {
   const who = meSlug();
   let item = null, people = [], vendors = [], error = null, leadName = null;
+  const [perms, shareShade] = await Promise.all([workPerms(who), can(who, 'shareClientLink')]);
+  const canShare = shareShade !== 'no' || ['himanshu', 'aashif'].includes(who);
   try {
     [item, people, vendors, leadName] = await Promise.all([
       sanity(true).fetch(`*[_id==$id][0]${PROJECTION}`, { id: params.id }),
@@ -32,7 +36,7 @@ export default async function Page({ params }) {
   return (
     <>
       <Link className="btn sm" href="/work">Back to all work</Link>
-      <WorkItem initial={item} who={who} people={people} vendors={vendors} leadName={leadName} canEdit={['himanshu', 'aashif'].includes(who)} />
+      <WorkItem initial={item} who={who} people={people} vendors={vendors} leadName={leadName} canEdit={['himanshu', 'aashif'].includes(who)} perms={perms} canShare={canShare} />
     </>
   );
 }

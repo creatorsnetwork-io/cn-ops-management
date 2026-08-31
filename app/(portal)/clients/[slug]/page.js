@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { sanity } from '../../../../lib/sanity';
 import { meSlug } from '../../../../lib/me';
 import { pageAllowed } from '../../../../lib/guard';
+import { can } from '../../../../lib/perm';
 import NotYours from '../../../../components/NotYours';
 import ClientDetail from '../../../../components/ClientDetail';
 import { evaluate } from '../../../../lib/onboard';
@@ -17,7 +18,7 @@ function projectHealth(p) {
 
 export default async function Page({ params }) {
   const who = meSlug();
-  if (!pageAllowed(who, '/clients')) return <NotYours what="Clients" />;
+  if (!(await pageAllowed(who, '/clients'))) return <NotYours what="Clients" />;
 
   const today = new Date().toISOString().slice(0, 10);
   let c = null, error = null, links = 0;
@@ -66,5 +67,6 @@ export default async function Page({ params }) {
   c.typeLabel = c.clientType || c.industry || c.businessType || 'Client type not set';
   c.brain = onb.done[2] ? 'Written' : 'Missing';
 
-  return <ClientDetail c={c} onb={onb} links={links} who={who} canEdit={['himanshu', 'aashif'].includes(who)} />;
+  const addShade = await can(who, 'createProject');
+  return <ClientDetail c={c} onb={onb} links={links} who={who} canEdit={['himanshu', 'aashif'].includes(who)} addShade={addShade} />;
 }

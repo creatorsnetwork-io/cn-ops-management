@@ -13,7 +13,7 @@ export const maxDuration = 180;
 // Nothing is applied automatically: the lines come back as a proposal.
 export async function POST(req) {
   const who = meSlug();
-  if (can(who, 'uploadContract') !== 'yes')
+  if ((await can(who, 'uploadContract')) !== 'yes')
     return Response.json({ ok: false, error: 'Only Himanshu or Aashif can upload a contract.' }, { status: 403 });
 
   const ct = req.headers.get('content-type') || '';
@@ -97,7 +97,7 @@ ${String(p.contractText).slice(0, 60000)}`,
 
     // Accept the proposal, replacing the baseline.
     if (b.action === 'apply') {
-      if (can(who, 'editDeliverables') !== 'yes')
+      if ((await can(who, 'editDeliverables')) !== 'yes')
         return Response.json({ ok: false, error: 'Only Himanshu or Aashif can set the baseline.' }, { status: 403 });
       const rows = (b.deliverables || []).map((d, i) => ({
         _key: 'dl' + Date.now() + i,

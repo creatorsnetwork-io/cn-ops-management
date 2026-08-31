@@ -12,7 +12,7 @@ export default async function PortalLayout({ children }) {
   let error = null;
   try { who = await me(); } catch (e) { error = e.message; }
 
-  const allowedGroups = navFor(who.slug);
+  const allowedGroups = await navFor(who.slug);
   const visibleHrefs = new Set(allowedGroups.flatMap((g) => g.items.map((i) => i.href)));
   let searchItems = [], searchError = '';
   const [counts, search] = await Promise.all([

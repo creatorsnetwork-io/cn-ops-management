@@ -19,7 +19,7 @@ function monday(d = new Date()) {
 
 export default async function Page() {
   const who = meSlug();
-  if (!pageAllowed(who, '/team')) return <NotYours what="Team and capacity" />;
+  if (!(await pageAllowed(who, '/team'))) return <NotYours what="Team and capacity" />;
 
   let rows = [], error = null;
   try {
@@ -38,12 +38,19 @@ export default async function Page() {
     const after = new Date(next); after.setUTCDate(after.getUTCDate() + 7);
     const startKey = iso(start), nextKey = iso(next), afterKey = iso(after);
 
+    const capBySlug = Object.fromEntries(await Promise.all(people.map(async (p) => [p.slug, {
+      approveCraft: softYes(await can(p.slug, 'approveCraft')),
+      shipGate: softYes(await can(p.slug, 'shipGate')),
+      triageFeedback: softYes(await can(p.slug, 'triageFeedback')),
+    }])));
+
     rows = people.map((p) => {
       const mine = work.filter((w) => w.assignee === p.slug);
+      const cap = capBySlug[p.slug] || {};
       const queue = work.filter((w) => {
-        if (w.state === 'craft' || (w.state === 'submitted' && w.needsCraft)) return softYes(can(p.slug, 'approveCraft'));
-        if (w.state === 'ship' || (w.state === 'submitted' && !w.needsCraft)) return softYes(can(p.slug, 'shipGate'));
-        if (w.state === 'client') return softYes(can(p.slug, 'triageFeedback'));
+        if (w.state === 'craft' || (w.state === 'submitted' && w.needsCraft)) return cap.approveCraft;
+        if (w.state === 'ship' || (w.state === 'submitted' && !w.needsCraft)) return cap.shipGate;
+        if (w.state === 'client') return cap.triageFeedback;
         return false;
       }).length;
       const thisWeek = mine.filter((w) => w.due && w.due >= startKey && w.due < nextKey);

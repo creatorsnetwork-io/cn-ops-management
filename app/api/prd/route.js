@@ -11,7 +11,7 @@ export const revalidate = 0;
 export async function POST(req) {
   const who = meSlug();
   const b = await req.json();
-  const rights = can(who, 'editPRD');
+  const rights = await can(who, 'editPRD');
   const c = sanity(true);
   const now = new Date().toISOString();
 

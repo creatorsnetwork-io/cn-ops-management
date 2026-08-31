@@ -20,7 +20,7 @@ function healthOf(c) {
 
 export default async function Clients() {
   const who = meSlug();
-  if (!pageAllowed(who, '/clients')) return <NotYours what="Clients" />;
+  if (!(await pageAllowed(who, '/clients'))) return <NotYours what="Clients" />;
 
   const today = new Date().toISOString().slice(0, 10);
   let rows = [], favs = [], error = null;
@@ -63,10 +63,12 @@ export default async function Clients() {
 
   } catch (e) { error = e.message; }
 
+  const addShade = await can(who, 'createClient');
+
   return (
     <>
       {error ? <div className="alertbar">Sanity did not answer. <code>{error}</code></div> : null}
-      <ClientsBrowse who={who} rows={rows} favs={favs} canAdd={can(who, 'createClient') !== 'no'} />
+      <ClientsBrowse who={who} rows={rows} favs={favs} addShade={addShade} />
     </>
   );
 }
