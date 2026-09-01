@@ -12,7 +12,13 @@ export default async function Page() {
 
   const local = process.env.NODE_ENV !== 'production';
   const origins = c ? (c.origins || []) : [];
-  const hostReady = origins.some((o) => o.includes('localhost'));
+  // The origins list only ever comes from a local dropped OAuth-client JSON
+  // (gitignored, never deployed), so it's always empty in production. There
+  // is no way to introspect Google Cloud Console's Authorized origins from
+  // here, so in production we trust it's been set up and let Google's own
+  // script fail with its own error if it hasn't. The origins-based hint stays
+  // for local dev, where the JSON file makes it accurate.
+  const hostReady = local ? origins.some((o) => o.includes('localhost')) : true;
 
   return (
     <SignIn
