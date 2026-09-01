@@ -3,7 +3,7 @@ import { meSlug } from '../../../lib/me';
 import { can } from '../../../lib/perm';
 import { readProjectWeek, log } from '../../../lib/week';
 import { chat, HOUSE, LIMITS_TEXT } from '../../../lib/ai';
-import { checkWeekImages } from '../../../lib/imagecheck';
+import { checkWeekImages, checkItem, toNotes } from '../../../lib/imagecheck';
 import { brandBlock } from '../../../lib/brand';
 
 export const dynamic = 'force-dynamic';
@@ -266,6 +266,35 @@ ${body}`,
       await log(who, 'Checked images against captions', b.slug + ':' + w.week,
         result.flags.length + ' note(s), ' + result.checked + ' checked, ' + result.cached + ' cached, ' + result.skipped + ' skipped of ' + result.total);
       return Response.json({ ok: true, count: result.flags.length, checked: result.checked, cached: result.cached, skipped: result.skipped, total: result.total });
+    }
+
+    // One row at a time, so the panel can show flags as they land instead of
+    // one long wait followed by everything at once. Each call only ever
+    // touches its own row's flags in the stored array, so calls for
+    // different rows are safe to run back to back without clobbering each
+    // other's results.
+    if (b.action === 'imageItem') {
+      const w = await readProjectWeek(b.slug, b.week);
+      if (w.error) return Response.json({ ok: false, error: w.error });
+      const item = w.items.find((i) => i.key === b.key);
+      if (!item) return Response.json({ ok: false, error: 'That row is not part of this week anymore.' });
+
+      let result;
+      try { result = await checkItem(item); }
+      catch (e) { result = { key: item.key, error: e.message || String(e) }; }
+      const notes = toNotes(item, result);
+
+      const id = 'week.' + b.slug + '.' + w.week;
+      await c.createIfNotExists({ _id: id, _type: 'weekReview', projectSlug: b.slug, week: w.week, items: [], flags: [] });
+      const current = await c.fetch('*[_id==$id][0]{imageFlags}', { id });
+      const kept = (current?.imageFlags || []).filter((f) => f.key !== item.key);
+      const fresh = notes.map((n, idx) => ({
+        _key: 'i' + item.key + '-' + idx, key: item.key, channel: n.channel, note: n.note,
+        label: [item.date, item.type, item.title].filter(Boolean).join(' \u00b7 ') || item.key,
+      }));
+      await c.patch(id).set({ imageFlags: [...kept, ...fresh], imageAt: now, imageBy: who }).commit();
+
+      return Response.json({ ok: true, key: item.key, flags: fresh, fromCache: !!(result && result.fromCache) });
     }
 
     if (b.action === 'discard') {

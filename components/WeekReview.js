@@ -102,6 +102,7 @@ export default function WeekReview({ slug, startWeek }) {
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState('');
   const [open, setOpen] = useState(null);
+  const [imgProgress, setImgProgress] = useState(null); // {done, total} while a per-row image check is running
 
   const load = useCallback(() => {
     setD(null); setErr(null); setMsg(''); setOpen(null);
@@ -180,14 +181,38 @@ export default function WeekReview({ slug, startWeek }) {
                 }}>{busy === 'tone' ? <><Spin /> Reading</> : '✦ Read it for tone'}</button>) : null}
               {(P.generate || 'no') !== 'no' ? (
                 <button className="btn sm" disabled={!!busy} onClick={async () => {
-                  setBusy('image'); setMsg('');
-                  const r = await fetch('/api/generate', {
-                    method: 'POST', headers: { 'content-type': 'application/json' },
-                    body: JSON.stringify({ action: 'image', slug, week }),
-                  });
-                  const j = await r.json(); setBusy('');
-                  if (j.ok) { setMsg(j.count ? '' : 'Checked ' + j.total + ' item(s), nothing to flag.'); load(); } else setMsg(j.error);
-                }}>{busy === 'image' ? <><Spin /> Checking images</> : '✦ Check images against captions'}</button>) : null}
+                  // One row at a time on purpose: each row's flags land in the
+                  // panel as soon as that row is done, instead of the whole set
+                  // appearing together after everything has finished, which on
+                  // a full week of carousels was a long silent wait.
+                  const candidates = items.filter((i) => i.creativeLink && (i.captions || []).some((c) => c.has));
+                  if (!candidates.length) { setMsg('Nothing here has both a creative link and a written caption to check.'); return; }
+                  setBusy('image'); setMsg(''); setImgProgress({ done: 0, total: candidates.length });
+                  let flagged = 0, failed = 0;
+                  for (const item of candidates) {
+                    let j;
+                    try {
+                      const r = await fetch('/api/generate', {
+                        method: 'POST', headers: { 'content-type': 'application/json' },
+                        body: JSON.stringify({ action: 'imageItem', slug, week, key: item.key }),
+                      });
+                      j = await r.json();
+                    } catch (e) { j = { ok: false, error: String(e) }; }
+                    if (j.ok) {
+                      if (j.flags.length) flagged++;
+                      setD((prev) => {
+                        if (!prev) return prev;
+                        const image = { ...prev.image };
+                        if (j.flags.length) image[item.key] = j.flags; else delete image[item.key];
+                        const imageCount = Object.values(image).reduce((n, a) => n + a.length, 0);
+                        return { ...prev, image, imageCount, imageAt: new Date().toISOString(), imageBy: P.who || prev.imageBy };
+                      });
+                    } else failed++;
+                    setImgProgress((p) => ({ done: (p ? p.done : 0) + 1, total: candidates.length }));
+                  }
+                  setBusy(''); setImgProgress(null);
+                  setMsg(failed ? failed + ' item(s) could not be checked, try again for those.' : (flagged ? '' : 'Checked ' + candidates.length + ' item(s), nothing to flag.'));
+                }}>{busy === 'image' ? <><Spin /> Checking {imgProgress ? imgProgress.done + ' of ' + imgProgress.total : 'images'}</> : '✦ Check images against captions'}</button>) : null}
               {(P.generate || 'no') !== 'no' && !shipped ? (
                 <button className="btn sm" disabled={!!busy} onClick={async () => {
                   setBusy('ideas'); setMsg('');
