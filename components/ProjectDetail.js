@@ -10,6 +10,8 @@ import ProjectIdeas from './ProjectIdeas';
 import ProjectTabs from './ProjectTabs';
 import { KINDS, LABEL, TAG, verbsFor, canAssign, isLate } from '../lib/work';
 
+function Spin() { return <span className="spin" aria-label="working" />; }
+
 // The brand brain lives on the client now, shared by every project under it.
 function hasBrand(b) {
   if (!b) return false;
@@ -88,12 +90,18 @@ export default function ProjectDetail({ p, activity, perms, activeTab, who }) {
   const [workBusy, setWorkBusy] = useState('');
   const [closing, setClosing] = useState(false);
   const [closeReason, setCloseReason] = useState('');
+  const [finalFilesUrl, setFinalFilesUrl] = useState(p.finalFilesUrl || '');
+  const [shortfallNote, setShortfallNote] = useState('');
+  const [packGeneratedAt, setPackGeneratedAt] = useState(p.packGeneratedAt || '');
+  const [packBusy, setPackBusy] = useState(false);
   const [closeBusy, setCloseBusy] = useState(false);
   const [closeErr, setCloseErr] = useState('');
+  const [fieldErr, setFieldErr] = useState({});
   const stages = STAGES[p.type] || ['Plan', 'Production', 'Client', 'Approved'];
   const stageIndex = p.stage === 'Closed' ? stages.length : Math.max(0, stages.indexOf(p.stage));
   const latestReview = (p.reviews || [])[0];
   const contractUrl = '/projects/' + p.slug + '?tab=deliverables#contract';
+  const shortfall = p.target > 0 && p.approved < p.target;
 
   async function moveWork(id, verb, extra) {
     setWorkBusy(id); setWorkNote((prev) => ({ ...prev, [id]: '' }));
@@ -117,11 +125,29 @@ export default function ProjectDetail({ p, activity, perms, activeTab, who }) {
     else setWorkNote((prev) => ({ ...prev, [id]: j.error }));
   }
 
+  async function generatePack() {
+    setPackBusy(true);
+    window.open('/projects/' + p.slug + '/pack', '_blank');
+    const r = await fetch('/api/project/' + p.slug, {
+      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ markPackGenerated: true }),
+    });
+    const j = await r.json(); setPackBusy(false);
+    if (j.ok) setPackGeneratedAt(j.packGeneratedAt);
+  }
+
   async function closeProject() {
+    const errs = {};
+    if (!closeReason.trim()) errs.reason = 'Write why this is closing now.';
+    if (!finalFilesUrl.trim()) errs.finalFilesUrl = 'Add a link before closing.';
+    if (shortfall && !shortfallNote.trim()) errs.shortfallNote = 'Explain the shortfall before closing.';
+    if (!packGeneratedAt) errs.pack = 'Generate the dispute pack before closing.';
+    if (Object.keys(errs).length) { setFieldErr(errs); return; }
+    setFieldErr({});
     setCloseBusy(true); setCloseErr('');
     const r = await fetch('/api/project/' + p.slug, {
       method: 'PATCH', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ close: { reason: closeReason } }),
+      body: JSON.stringify({ close: { reason: closeReason, finalFilesUrl, shortfallNote } }),
     });
     const j = await r.json(); setCloseBusy(false);
     if (j.ok) window.location.href = '/archive';
@@ -149,12 +175,44 @@ export default function ProjectDetail({ p, activity, perms, activeTab, who }) {
         <div className="panel">
           <header><h2>Close this project</h2></header>
           <div className="pad">
-            <p className="note">Deliverables reconciled, final files linked and a dispute pack generated are what closing is meant to mean, ahead of relying on the archive record. Write why this is closing now.</p>
-            <textarea value={closeReason} onChange={(e) => setCloseReason(e.target.value)} placeholder="Why is this closing now" />
+            <p className="note">Deliverables reconciled, final files linked and a dispute pack generated are what closing means, not just a reason on file. All three below are required.</p>
+
+            <div style={{ marginBottom: 10 }}>
+              <div className="k">1. Deliverables</div>
+              {shortfall ? (
+                <>
+                  <p className="s" style={{ margin: '2px 0 6px' }}>Short: {p.approved} of {p.target} approved. Explain the shortfall before closing.</p>
+                  <textarea style={fieldErr.shortfallNote ? { borderColor: 'var(--bad)' } : undefined} value={shortfallNote} onChange={(e) => { setShortfallNote(e.target.value); setFieldErr((f) => ({ ...f, shortfallNote: '' })); }} placeholder="Why is this closing short of the committed number" />
+                  {fieldErr.shortfallNote ? <div style={{ color: 'var(--bad)', fontSize: 12, marginTop: 3 }}>{fieldErr.shortfallNote}</div> : null}
+                </>
+              ) : (
+                <p className="s" style={{ margin: '2px 0' }}>{p.target ? 'Reconciled: ' + p.approved + ' of ' + p.target + ' approved.' : 'No deliverable targets set on this project.'}</p>
+              )}
+            </div>
+
+            <div style={{ marginBottom: 10 }}>
+              <div className="k">2. Final files</div>
+              <input className="inp" style={fieldErr.finalFilesUrl ? { borderColor: 'var(--bad)' } : undefined} value={finalFilesUrl} onChange={(e) => { setFinalFilesUrl(e.target.value); setFieldErr((f) => ({ ...f, finalFilesUrl: '' })); }} placeholder="Link to masters, exports and the last approved versions" />
+              {fieldErr.finalFilesUrl ? <div style={{ color: 'var(--bad)', fontSize: 12, marginTop: 3 }}>{fieldErr.finalFilesUrl}</div> : null}
+            </div>
+
+            <div style={{ marginBottom: 10 }}>
+              <div className="k">3. Dispute pack</div>
+              {packGeneratedAt ? (
+                <p className="s" style={{ margin: '2px 0' }}>Generated. <Link href={'/projects/' + p.slug + '/pack'}>Open it again</Link></p>
+              ) : (
+                <button className="btn sm" type="button" disabled={packBusy} onClick={generatePack}>{packBusy ? <><Spin /> Opening</> : 'Generate dispute pack'}</button>
+              )}
+              {fieldErr.pack ? <div style={{ color: 'var(--bad)', fontSize: 12, marginTop: 3 }}>{fieldErr.pack}</div> : null}
+            </div>
+
+            <div className="k">Reason</div>
+            <textarea style={fieldErr.reason ? { borderColor: 'var(--bad)' } : undefined} value={closeReason} onChange={(e) => { setCloseReason(e.target.value); setFieldErr((f) => ({ ...f, reason: '' })); }} placeholder="Why is this closing now" />
+            {fieldErr.reason ? <div style={{ color: 'var(--bad)', fontSize: 12, marginTop: 3 }}>{fieldErr.reason}</div> : null}
             {closeErr ? <div className="alertbar">{closeErr}</div> : null}
             <div className="rowb" style={{ marginTop: 10 }}>
-              <button className="btn dark" disabled={closeBusy || !closeReason.trim()} onClick={closeProject}>Confirm close</button>
-              <button className="btn" onClick={() => { setClosing(false); setCloseReason(''); setCloseErr(''); }}>Cancel</button>
+              <button className="btn dark" disabled={closeBusy} onClick={closeProject}>{closeBusy ? <><Spin /> Closing</> : 'Confirm close'}</button>
+              <button className="btn" onClick={() => { setClosing(false); setCloseReason(''); setCloseErr(''); setFieldErr({}); }}>Cancel</button>
             </div>
           </div>
         </div>

@@ -18,7 +18,7 @@ export default async function Archive() {
     [projects, weeks, work, requests, escalations] = await Promise.all([
       sanity(true).fetch(
         `*[_type=="project" && status in ["closed","archived","inactive"]]|order(_updatedAt desc){
-        slug,name,type,closedAt,closedBy,closedReason,
+        slug,name,type,closedAt,closedBy,closedReason,finalFilesUrl,deliverableShortfallNote,
         "client":client->name,
         "approved":count(*[_type=="work" && project._ref==^._id && state in ["approved","done"]]),
         "workTotal":count(*[_type=="work" && project._ref==^._id])}`),
@@ -70,9 +70,10 @@ export default async function Archive() {
                 <td className="b">{p.client || 'Not recorded'}</td>
                 <td>{p.name}</td>
                 <td className="dim">{typeName[p.type] || p.type || 'Not recorded'}</td>
-                <td className="dim">{p.closedAt ? when(p.closedAt) + (p.closedBy ? ', by ' + p.closedBy : '') : 'Date not recorded'}{p.closedReason ? <div style={{ color: 'var(--faint)', fontSize: 12 }}>{p.closedReason}</div> : null}</td>
+                <td className="dim">{p.closedAt ? when(p.closedAt) + (p.closedBy ? ', by ' + p.closedBy : '') : 'Date not recorded'}{p.closedReason ? <div style={{ color: 'var(--faint)', fontSize: 12 }}>{p.closedReason}</div> : null}{p.deliverableShortfallNote ? <div style={{ color: 'var(--faint)', fontSize: 12 }}>Shortfall: {p.deliverableShortfallNote}</div> : null}</td>
                 <td className="dim">{p.approved} of {p.workTotal} work items approved</td>
                 <td className="rowb">
+                  {p.finalFilesUrl ? <a className="btn sm" href={p.finalFilesUrl} target="_blank" rel="noreferrer">Final files</a> : null}
                   <Link className="btn sm" href={'/projects/' + p.slug + '/pack'}>Dispute pack</Link>
                   <Link className="btn sm" href={'/projects/' + p.slug}>Open</Link>
                 </td>

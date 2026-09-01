@@ -1,10 +1,21 @@
 import Link from 'next/link';
 import { sanity } from '../../../../../lib/sanity';
 import { rollup } from '../../../../../lib/rollup';
+import { LABEL, KINDS } from '../../../../../lib/work';
 import PrintButton from '../../../../../components/PrintButton';
 import ProjectTabs from '../../../../../components/ProjectTabs';
 
 export const dynamic = 'force-dynamic';
+
+// Sets the browser tab title, which is also what "Print / Save as PDF" uses
+// as the suggested filename, so this stops printing out as "CN Ops Portal.pdf".
+export async function generateMetadata({ params }) {
+  try {
+    const p = await sanity(true).fetch('*[_type=="project" && slug==$s][0]{name,"client":client->name}', { s: params.slug });
+    if (p) return { title: (p.client ? p.client + ' - ' : '') + p.name + ' - Record of approvals' };
+  } catch (e) { /* falls through to the default title below */ }
+  return { title: 'Record of approvals' };
+}
 
 const when = (t) => (t ? new Date(t).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
 const dayOf = (d) => (d ? new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '');
@@ -13,7 +24,7 @@ export default async function Pack({ params, searchParams }) {
   const from = (searchParams && searchParams.from) || '';
   const to = (searchParams && searchParams.to) || '';
 
-  let p = null, snaps = [], roll = null, error = null;
+  let p = null, snaps = [], roll = null, workItems = [], error = null;
   try {
     p = await sanity(true).fetch(
       `*[_type=="project" && slug==$s][0]{
@@ -21,13 +32,17 @@ export default async function Pack({ params, searchParams }) {
         "workCount":count(*[_type=="work" && references(^._id)])
       }`, { s: params.slug });
     if (p) {
-      [snaps, roll] = await Promise.all([
+      [snaps, roll, workItems] = await Promise.all([
         sanity(true).fetch(
           `*[_type=="snapshot" && projectSlug==$s
             && ($from == "" || week >= $from) && ($to == "" || week <= $to)]|order(week asc, at asc){
           _id, at, by, decision, comment, itemKey, week, seen }`,
           { s: params.slug, from, to }),
         rollup(params.slug),
+        sanity(true).fetch(
+          `*[_type=="work" && project->slug==$s]|order(due asc){
+          _id, title, kind, state, driveLink, approvedBy, approvedAt, history, feedback}`,
+          { s: params.slug }),
       ]);
     }
   } catch (e) { error = e.message; }
@@ -79,10 +94,48 @@ export default async function Pack({ params, searchParams }) {
         </div>
       ) : null}
 
+      {workItems.length ? (
+        <div className="panel">
+          <header><h2>Work item record</h2><span className="pill">{workItems.length} item{workItems.length === 1 ? '' : 's'}</span></header>
+          <div style={{ padding: '13px 16px' }}>
+            {workItems.map((w) => (
+              <div className="pk" key={w._id}>
+                <div className="pkh">
+                  <b>{w.title}</b>
+                  <span style={{ fontSize: 12, color: 'var(--faint)' }}>{(KINDS[w.kind] || {}).label || w.kind}</span>
+                </div>
+                <div style={{ fontSize: 13 }}>
+                  <span className={'tag ' + (['approved', 'done'].includes(w.state) ? 'ok' : 'mute')}>{LABEL[w.state] || w.state}</span>
+                  {w.approvedBy ? <> &middot; approved by <b>{w.approvedBy}</b> on {when(w.approvedAt)}</> : null}
+                </div>
+                {w.driveLink ? (
+                  <div style={{ fontSize: 12.5, marginTop: 7 }}>
+                    File: <a href={w.driveLink} target="_blank" rel="noreferrer">{w.driveLink}</a>
+                  </div>) : null}
+                {(w.feedback || []).map((f, i) => (
+                  <div key={f._key || i} style={{ marginTop: 5, color: 'var(--bad)' }}>
+                    Their words: &ldquo;{f.text}&rdquo;{f.resolved ? ', resolved by ' + (f.resolvedBy || 'the team') : ''}
+                  </div>
+                ))}
+                {(w.history || []).length ? (
+                  <div style={{ marginTop: 7, fontSize: 12, color: 'var(--faint)' }}>
+                    {w.history.map((h, i) => (
+                      <div key={h._key || i}>
+                        {when(h.at)} &mdash; {h.who} moved it {h.from ? 'from ' + h.from + ' ' : ''}to {h.to}
+                        {h.clientName ? ', client: ' + h.clientName : ''}{h.note ? ', ' + h.note : ''}
+                      </div>
+                    ))}
+                  </div>) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       {weekList.length === 0 ? (
         <div className="panel"><div className="empty">
-          No client decisions recorded yet for this project. Once a client approves through their link, every
-          decision lands here permanently.
+          No weekly review has been shared with the client for this project yet. Once a client approves
+          through a review link, every decision lands here permanently.
         </div></div>
       ) : null}
 
