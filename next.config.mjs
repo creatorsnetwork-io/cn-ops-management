@@ -14,6 +14,11 @@ const nextConfig = {
       '/api/**': [
         './node_modules/pdfjs-dist/**',
         './node_modules/@napi-rs/canvas/**',
+        // @napi-rs/canvas's actual native binary is not inside its own
+        // folder: npm installs it as a separate sibling package picked for
+        // the current platform (e.g. @napi-rs/canvas-linux-x64-gnu). The
+        // glob above alone leaves that binary out of the deployed function.
+        './node_modules/@napi-rs/canvas-*/**',
         './node_modules/mammoth/**',
       ],
     },
