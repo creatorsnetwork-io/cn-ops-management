@@ -6,11 +6,6 @@ import Who from './Who';
 import Breadcrumbs from './Breadcrumbs';
 import GlobalSearch from './GlobalSearch';
 
-function initials(name) {
-  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
-  return ((parts[0] || '?')[0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
-}
-
 export default function Shell({ groups, who, search, children }) {
   const [open, setOpen] = useState(false);
   const canOpenJobs = groups.some((g) => g.items.some((i) => i.href === '/jobs'));
@@ -33,7 +28,6 @@ export default function Shell({ groups, who, search, children }) {
           <GlobalSearch items={search.items} error={search.error} />
           <div className="whobox">
             <Who how={who.how} name={who.name} role={who.role} />
-            <div className="av" title={[who.name, who.role].filter(Boolean).join(', ')}>{initials(who.name)}</div>
           </div>
         </div>
         <main className="main">{children}</main>
